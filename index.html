@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Vases Connect — Communauté Vases d’Honneur</title>
+    <meta name="description" content="Plateforme communautaire intelligente de Vases d’Honneur. Connecter les talents, les besoins et les opportunités." />
+    <meta property="og:title" content="Vases Connect — Communauté Vases d’Honneur" />
+    <meta property="og:description" content="Plateforme communautaire intelligente de Vases d’Honneur. Connecter les talents, les besoins et les opportunités." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#0A3D36" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="VasesConnect" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="VasesConnect" />
+    
+    <!-- PWA Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Apple Touch Icons for iOS Home Screen -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png" />
+
+    <!-- Standard Favicons & Android Chrome Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/svg+xml" href="/logo-icon.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('PWA Service Worker registered:', reg.scope))
+            .catch((err) => console.warn('PWA Service Worker registration skipped:', err));
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

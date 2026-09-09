@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="sheen" cx="30%" cy="20%" r="90%">
+      <stop offset="0%" stop-color="#14564C"/>
+      <stop offset="60%" stop-color="#0A3D36"/>
+      <stop offset="100%" stop-color="#052420"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  
+  <!-- Solid background extending to all edges -->
+  <rect width="512" height="512" fill="url(#sheen)"/>
+  
+  <!-- Concentric Gold Ring -->
+  <circle cx="256" cy="256" r="230" stroke="#C59A27" stroke-width="4" stroke-opacity="0.4" fill="none"/>
+  <circle cx="256" cy="256" r="218" stroke="#E5B22F" stroke-width="1.5" stroke-opacity="0.2" fill="none"/>
+  
+  <!-- Scaled & Centered Emblem (safe zone for maskable & apple icons) -->
+  <g transform="translate(86, 68) scale(0.85)" filter="url(#shadow)">
+    <!-- Holy Anointing Flame / Oil Droplet -->
+    <path d="M 125 105 C 125 80, 142 50, 142 50 C 142 50, 160 80, 160 105 C 160 120, 150 130, 142 130 C 134 130, 125 120, 125 105 Z" fill="#E5B22F" stroke="#FFFFFF" stroke-width="4" />
+    <circle cx="142" cy="108" r="4.5" fill="#FFFFFF" />
+
+    <!-- Stylized V in royal gold -->
+    <path d="M 60 145 C 50 100, 70 70, 85 70 C 100 70, 105 95, 100 140 C 90 230, 150 280, 185 220 C 195 200, 200 160, 195 140 C 185 90, 215 75, 230 85 C 245 95, 240 130, 215 185 C 190 240, 170 300, 135 300 C 80 300, 45 220, 60 145 Z" fill="#C59A27" />
+
+    <!-- Stylized H joining gracefully -->
+    <path d="M 200 100 C 215 70, 240 70, 245 95 C 250 130, 230 190, 220 240 C 210 280, 235 295, 255 270 C 275 245, 290 180, 285 125 C 280 90, 300 75, 315 85 C 330 95, 320 135, 305 190 C 290 245, 300 285, 330 285 C 345 285, 355 275, 360 260 C 362 250, 370 252, 368 265 C 360 295, 335 305, 308 302 C 275 298, 260 265, 262 230 C 245 255, 220 275, 195 270 C 175 265, 175 240, 185 195 L 200 100 Z" fill="#E5B22F" />
+
+    <!-- Red accent bar under logo (Vases d'Honneur signature) -->
+    <rect x="260" y="325" width="48" height="11" rx="3.5" fill="#A31D24" />
+    
+    <!-- Gold underline banner -->
+    <line x1="60" y1="355" x2="360" y2="355" stroke="#C59A27" stroke-width="4.5" stroke-linecap="round" />
+
+    <!-- Subtitle dots -->
+    <circle cx="60" cy="355" r="5" fill="#C59A27" />
+    <circle cx="360" cy="355" r="5" fill="#C59A27" />
+  </g>
+  
+  <!-- Subtle brand text at bottom inside safe zone -->
+  <text x="256" y="445" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="800" fill="#E5B22F" letter-spacing="4">VASES D'HONNEUR</text>
+  <text x="256" y="475" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600" fill="#FFFFFF" opacity="0.85" letter-spacing="6">CONNECT</text>
+</svg>
