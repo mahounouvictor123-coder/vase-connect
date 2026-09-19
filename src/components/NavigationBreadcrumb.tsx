@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Home, ChevronRight, Sparkles, ShoppingBag, Briefcase, Users, Store } from 'lucide-react';
+import { ArrowLeft, Home, ChevronRight, Sparkles, ShoppingBag, Briefcase, Users, Store, Crown, BookOpen } from 'lucide-react';
 
 interface NavigationBreadcrumbProps {
   activeTab: string;
@@ -7,6 +7,26 @@ interface NavigationBreadcrumbProps {
 }
 
 const TAB_CONFIG: Record<string, { title: string; category: string; icon?: React.ReactNode }> = {
+  presence_culte: {
+    title: 'Confirmation de Présence au Culte — 1er Culte (07h30) & 2ème Culte (10h30)',
+    category: 'Culte Dominical & Tribus',
+    icon: <Crown className="w-3.5 h-3.5 text-[#E5B22F]" />,
+  },
+  pastor: {
+    title: 'Espace Pastoral & Gouvernance — Résumés, Rapports & Boîte Pastorale',
+    category: 'Direction Pastorale',
+    icon: <BookOpen className="w-3.5 h-3.5 text-[#E5B22F]" />,
+  },
+  familles_honneur: {
+    title: 'Familles d\'Honneur — Cellules de Proximité Géolocalisées',
+    category: 'Cellules de Proximité',
+    icon: <Users className="w-3.5 h-3.5 text-[#E5B22F]" />,
+  },
+  tribus: {
+    title: 'Les 12 Tribus — Patriarches, Matriarches & Membres',
+    category: 'Organisation Communautaire',
+    icon: <Crown className="w-3.5 h-3.5 text-[#E5B22F]" />,
+  },
   portes: {
     title: '12 Portes d\'Influence pour Transformer une Nation — MOHAMMED SANOGO',
     category: 'Ouvrage Apostolique & Impact',

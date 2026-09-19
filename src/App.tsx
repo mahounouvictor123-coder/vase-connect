@@ -18,6 +18,9 @@ import { AuthModal } from './components/AuthModal';
 import { CreateAdModal } from './components/CreateAdModal';
 import { ProfessionalProfileModal } from './components/ProfessionalProfileModal';
 import { InfluenceGatesView } from './components/InfluenceGatesView';
+import { TribesView } from './components/TribesView';
+import { FamillesHonneurView } from './components/FamillesHonneurView';
+import { PastorSpaceView } from './components/pastor/PastorSpaceView';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import {
   MOCK_CURRENT_USER,
@@ -31,7 +34,36 @@ import {
   MOCK_NOTIFICATIONS,
 } from './data/mockData';
 import { INITIAL_GATE_MEMBERS } from './data/influenceGatesData';
-import { UserProfile, ProductItem, OpportunityItem, CommunityPost, NotificationItem, MemberAd, GateMemberProfile, InfluenceGateId } from './types';
+import { INITIAL_TRIBES, INITIAL_TRIBE_MEMBERS } from './data/tribesData';
+import { INITIAL_FAMILLES_HONNEUR, INITIAL_FAMILLE_INSCRIPTIONS } from './data/famillesHonneurData';
+import {
+  INITIAL_CULTES_RESUMES,
+  INITIAL_RAPPORT_TEMPLATES,
+  INITIAL_RAPPORTS_SOUMIS,
+  INITIAL_RAPPORTS_SPECIAUX,
+  INITIAL_CULTE_PRESENCES,
+} from './data/pastorData';
+import { CultePresenceConfirmationView } from './components/CultePresenceConfirmationView';
+import {
+  UserProfile,
+  ProductItem,
+  OpportunityItem,
+  CommunityPost,
+  NotificationItem,
+  MemberAd,
+  GateMemberProfile,
+  InfluenceGateId,
+  TribeMember,
+  TribeId,
+  FamilleHonneur,
+  FamilleHonneurInscription,
+  CulteResume,
+  RapportTemplate,
+  RapportSoumis,
+  RapportSpecial,
+  CultePresenceRecord,
+  CulteServiceType,
+} from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('accueil');
@@ -44,6 +76,19 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
   const [gateMembers, setGateMembers] = useState<GateMemberProfile[]>(INITIAL_GATE_MEMBERS);
   const [selectedGateIdForView, setSelectedGateIdForView] = useState<InfluenceGateId | undefined>(undefined);
+  const [tribes, setTribes] = useState(INITIAL_TRIBES);
+  const [tribeMembers, setTribeMembers] = useState<TribeMember[]>(INITIAL_TRIBE_MEMBERS);
+  const [selectedTribeIdForView, setSelectedTribeIdForView] = useState<TribeId | undefined>(undefined);
+  const [famillesHonneur, setFamillesHonneur] = useState<FamilleHonneur[]>(INITIAL_FAMILLES_HONNEUR);
+  const [familleInscriptions, setFamilleInscriptions] = useState<FamilleHonneurInscription[]>(INITIAL_FAMILLE_INSCRIPTIONS);
+  const [cultes, setCultes] = useState<CulteResume[]>(INITIAL_CULTES_RESUMES);
+  const [cultesPresences, setCultesPresences] = useState<CultePresenceRecord[]>(INITIAL_CULTE_PRESENCES);
+  const [presenceParamDate, setPresenceParamDate] = useState<string | undefined>(undefined);
+  const [presenceParamCulte, setPresenceParamCulte] = useState<CulteServiceType | undefined>(undefined);
+  const [rapportTemplates, setRapportTemplates] = useState<RapportTemplate[]>(INITIAL_RAPPORT_TEMPLATES);
+  const [rapports, setRapports] = useState<RapportSoumis[]>(INITIAL_RAPPORTS_SOUMIS);
+  const [rapportsSpeciaux, setRapportsSpeciaux] = useState<RapportSpecial[]>(INITIAL_RAPPORTS_SPECIAUX);
+  const [targetRapportFormId, setTargetRapportFormId] = useState<string | undefined>(undefined);
   const [assistantPrompt, setAssistantPrompt] = useState<string | undefined>(undefined);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCreateAdModalOpen, setIsCreateAdModalOpen] = useState(false);
@@ -81,7 +126,66 @@ export default function App() {
       if (initialTab) setActiveTab(initialTab);
     }
 
+    // Check query parameters for direct report form link or tab
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const requestedFormId = searchParams.get('rapportForm');
+      const requestedTab = searchParams.get('tab');
+      const requestedDate = searchParams.get('date');
+      const requestedCulte = searchParams.get('culte') as CulteServiceType | null;
+
+      if (requestedDate) {
+        setPresenceParamDate(requestedDate);
+      }
+      if (requestedCulte) {
+        setPresenceParamCulte(requestedCulte);
+      }
+
+      if (requestedFormId) {
+        setTargetRapportFormId(requestedFormId);
+        setActiveTab('pastor');
+      } else if (requestedTab) {
+        setActiveTab(requestedTab);
+      }
+    } catch {
+      // Ignored if URL parsing fails
+    }
+
     window.addEventListener('popstate', handlePopState);
+
+    // Fetch live Familles d'Honneur
+    fetch('/api/familles-honneur')
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.familles) && data.familles.length > 0) {
+          setFamillesHonneur(data.familles);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch live Pastor Data (cultes, templates, rapports, speciaux)
+    fetch('/api/pastor/data')
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          if (Array.isArray(data.cultes) && data.cultes.length > 0) setCultes(data.cultes);
+          if (Array.isArray(data.templates) && data.templates.length > 0) setRapportTemplates(data.templates);
+          if (Array.isArray(data.rapports) && data.rapports.length > 0) setRapports(data.rapports);
+          if (Array.isArray(data.rapportsSpeciaux) && data.rapportsSpeciaux.length > 0) setRapportsSpeciaux(data.rapportsSpeciaux);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch live Cultes Presences
+    fetch('/api/pastor/cultes-presences')
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.presences) && data.presences.length > 0) {
+          setCultesPresences(data.presences);
+        }
+      })
+      .catch(() => {});
+
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
@@ -185,6 +289,185 @@ export default function App() {
     }
   };
 
+  const handleSaveTribeMember = (member: TribeMember, isLeader: boolean) => {
+    // 1. Update tribeMembers list
+    setTribeMembers(prev => {
+      const existsIndex = prev.findIndex(
+        m => m.id === member.id || (m.userId === member.userId && m.tribeId === member.tribeId)
+      );
+      if (existsIndex >= 0) {
+        const copy = [...prev];
+        copy[existsIndex] = member;
+        return copy;
+      }
+      return [member, ...prev];
+    });
+
+    // 2. If leader, update tribe's chief
+    if (isLeader) {
+      setTribes(prev =>
+        prev.map(t => {
+          if (t.id === member.tribeId) {
+            return {
+              ...t,
+              leader: {
+                title: member.roleInTribe === 'MATRIARCHE' ? 'Matriarche' : 'Patriarche',
+                nom: member.nom,
+                prenom: member.prenom,
+                phone: member.numero,
+                quartier: member.quartier,
+                photoUrl: member.photoUrl,
+                assignedAt: member.registeredAt,
+              },
+            };
+          }
+          return t;
+        })
+      );
+    }
+
+    // 3. Update current user
+    if (currentUser) {
+      const updatedUser: UserProfile = {
+        ...currentUser,
+        tribeId: member.tribeId,
+        tribeRole: member.roleInTribe,
+      };
+      setCurrentUser(updatedUser);
+      setMembers(prev => prev.map(m => (m.id === currentUser.id ? updatedUser : m)));
+    }
+
+    // 4. Asynchronously persist to server
+    fetch('/api/tribes/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(member),
+    }).catch(() => {});
+  };
+
+  const handleSaveFamille = (newFamille: FamilleHonneur) => {
+    setFamillesHonneur(prev => {
+      const idx = prev.findIndex(f => f.id === newFamille.id);
+      if (idx !== -1) {
+        const copy = [...prev];
+        copy[idx] = newFamille;
+        return copy;
+      }
+      return [newFamille, ...prev];
+    });
+
+    fetch('/api/familles-honneur', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newFamille),
+    }).catch(() => {});
+  };
+
+  const handleSaveFamilleInscription = (inscription: FamilleHonneurInscription) => {
+    setFamilleInscriptions(prev => [inscription, ...prev]);
+    setFamillesHonneur(prev =>
+      prev.map(f =>
+        f.id === inscription.familleId
+          ? { ...f, membresInscritsCount: (f.membresInscritsCount || 0) + 1 }
+          : f
+      )
+    );
+
+    fetch('/api/familles-honneur/inscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inscription),
+    }).catch(() => {});
+  };
+
+  const handleAddCulte = (newCulte: CulteResume) => {
+    setCultes(prev => [newCulte, ...prev]);
+    fetch('/api/pastor/cultes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCulte),
+    }).catch(() => {});
+  };
+
+  const handleAddTemplate = (newTemplate: RapportTemplate) => {
+    setRapportTemplates(prev => [...prev, newTemplate]);
+    fetch('/api/pastor/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTemplate),
+    }).catch(() => {});
+  };
+
+  const handleAddRapport = (newRapport: RapportSoumis) => {
+    setRapports(prev => [newRapport, ...prev]);
+    fetch('/api/pastor/rapports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRapport),
+    }).catch(() => {});
+  };
+
+  const handleUpdateRapport = (updatedRapport: RapportSoumis) => {
+    setRapports(prev => prev.map(r => (r.id === updatedRapport.id ? updatedRapport : r)));
+    fetch(`/api/pastor/rapports/${updatedRapport.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedRapport),
+    }).catch(() => {});
+  };
+
+  const handleAddRapportSpecial = (special: RapportSpecial) => {
+    setRapportsSpeciaux(prev => [special, ...prev]);
+    fetch('/api/pastor/speciaux', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(special),
+    }).catch(() => {});
+  };
+
+  const handleAddCultePresence = async (newPresence: CultePresenceRecord) => {
+    setCultesPresences(prev => {
+      const filtered = prev.filter(
+        p =>
+          !(
+            p.dateDimanche === newPresence.dateDimanche &&
+            p.culte === newPresence.culte &&
+            ((p.memberId && newPresence.memberId && p.memberId === newPresence.memberId) ||
+              (p.nom.toLowerCase().trim() === newPresence.nom.toLowerCase().trim() &&
+                p.prenom.toLowerCase().trim() === newPresence.prenom.toLowerCase().trim()))
+          )
+      );
+      return [newPresence, ...filtered];
+    });
+
+    try {
+      const res = await fetch('/api/pastor/cultes-presences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPresence),
+      });
+      const data = await res.json();
+      if (data && data.newMember) {
+        setTribeMembers(prev => {
+          const exists = prev.some(m => m.id === data.newMember.id);
+          if (exists) return prev;
+          return [data.newMember, ...prev];
+        });
+      }
+    } catch {
+      // Handled via local optimistic state
+    }
+  };
+
+  const handleDeleteCultePresence = async (id: string) => {
+    setCultesPresences(prev => prev.filter(p => p.id !== id));
+    try {
+      await fetch(`/api/pastor/cultes-presences/${id}`, {
+        method: 'DELETE',
+      });
+    } catch {}
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7F6] text-slate-900 flex flex-col antialiased selection:bg-[#C59A27] selection:text-white">
       {/* Top Header */}
@@ -218,6 +501,10 @@ export default function App() {
               setSelectedGateIdForView(gateId as InfluenceGateId);
               handleNavigateTab('portes');
             }}
+            onSelectTribe={(tribeId) => {
+              setSelectedTribeIdForView(tribeId as TribeId);
+              handleNavigateTab('tribus');
+            }}
             members={members}
             products={products}
             opportunities={opportunities}
@@ -226,6 +513,69 @@ export default function App() {
             ads={ads}
             onOpenCreateAd={() => setIsCreateAdModalOpen(true)}
             onOpenProfessionalProfile={() => setIsProfessionalProfileModalOpen(true)}
+          />
+        )}
+
+        {activeTab === 'pastor' && (
+          <PastorSpaceView
+            currentUser={currentUser}
+            cultes={cultes}
+            templates={rapportTemplates}
+            rapports={rapports}
+            rapportsSpeciaux={rapportsSpeciaux}
+            presences={cultesPresences}
+            tribes={tribes}
+            tribeMembers={tribeMembers}
+            initialRapportFormId={targetRapportFormId}
+            onAddCulte={handleAddCulte}
+            onAddTemplate={handleAddTemplate}
+            onAddRapport={handleAddRapport}
+            onUpdateRapport={handleUpdateRapport}
+            onAddRapportSpecial={handleAddRapportSpecial}
+            onAddPresence={handleAddCultePresence}
+            onDeletePresence={handleDeleteCultePresence}
+            onOpenPublicLink={(date, culte) => {
+              setPresenceParamDate(date);
+              setPresenceParamCulte(culte);
+              handleNavigateTab('presence_culte');
+            }}
+          />
+        )}
+
+        {activeTab === 'presence_culte' && (
+          <CultePresenceConfirmationView
+            tribes={tribes}
+            tribeMembers={tribeMembers}
+            currentUser={currentUser}
+            initialDate={presenceParamDate}
+            initialCulte={presenceParamCulte}
+            onConfirmPresence={handleAddCultePresence}
+            onBackToHome={() => handleNavigateTab('accueil')}
+            onOpenPastorSpace={() => handleNavigateTab('pastor')}
+          />
+        )}
+
+        {activeTab === 'familles_honneur' && (
+          <FamillesHonneurView
+            currentUser={currentUser}
+            familles={famillesHonneur}
+            inscriptions={familleInscriptions}
+            onSaveFamille={handleSaveFamille}
+            onSaveInscription={handleSaveFamilleInscription}
+            onBackToHome={() => handleNavigateTab('accueil')}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+          />
+        )}
+
+        {activeTab === 'tribus' && (
+          <TribesView
+            currentUser={currentUser}
+            tribes={tribes}
+            tribeMembers={tribeMembers}
+            initialTribeId={selectedTribeIdForView}
+            onSaveTribeMember={handleSaveTribeMember}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onBackToHome={() => handleNavigateTab('accueil')}
           />
         )}
 

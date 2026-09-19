@@ -1,7 +1,9 @@
 import React from 'react';
-import { Sparkles, ShoppingBag, Users, Briefcase, ArrowRight, CheckCircle2, MessageCircle, Calendar, MapPin, Heart, Megaphone, Tag, Store, Award, Church, GraduationCap, Scale, Landmark, Vote, Radio, Sprout, Coins, Truck, Palette, HeartPulse, ShieldAlert } from 'lucide-react';
+import { Sparkles, ShoppingBag, Users, Briefcase, ArrowRight, CheckCircle2, MessageCircle, Calendar, MapPin, Heart, Megaphone, Tag, Store, Award, Church, GraduationCap, Scale, Landmark, Vote, Radio, Sprout, Coins, Truck, Palette, HeartPulse, ShieldAlert, Crown, BookOpen } from 'lucide-react';
 import { UserProfile, ProductItem, OpportunityItem, ChurchEvent, CommunityPost, MemberAd } from '../types';
 import { INFLUENCE_GATES } from '../data/influenceGatesData';
+import { INITIAL_TRIBES } from '../data/tribesData';
+import { INITIAL_FAMILLES_HONNEUR } from '../data/famillesHonneurData';
 
 interface HomeViewProps {
   onSelectTab: (tab: string) => void;
@@ -17,6 +19,7 @@ interface HomeViewProps {
   onOpenCreateAd?: () => void;
   onOpenProfessionalProfile?: () => void;
   onSelectGate?: (gateId: string) => void;
+  onSelectTribe?: (tribeId: string) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -33,6 +36,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenCreateAd,
   onOpenProfessionalProfile,
   onSelectGate,
+  onSelectTribe,
 }) => {
   const nextEvent = events[0];
 
@@ -79,8 +83,55 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
+      {/* Sunday Culte Pointage Banner */}
+      <div className="bg-gradient-to-r from-[#062722] via-[#0A3D36] to-[#135E54] rounded-3xl p-5 sm:p-6 text-white border-2 border-[#C59A27]/50 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#C59A27] text-slate-950 flex items-center justify-center font-black text-xl shadow-sm shrink-0">
+            🙏
+          </div>
+          <div className="space-y-0.5">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/40 text-[#E5B22F] text-[10px] font-black uppercase tracking-wider">
+              <Crown className="w-3 h-3" />
+              <span>Cultes Dominicales (07h30 & 10h30)</span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black tracking-tight">
+              Confirmation des Présences au Culte par Tribu
+            </h3>
+            <p className="text-xs text-slate-300">
+              Confirmez votre présence au 1er culte (07h30) ou au 2ème culte (10h30) pour que votre Tribu soit dénotée auprès de la chaire pastorale.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => onSelectTab('presence_culte')}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C59A27] to-[#E5B22F] hover:from-[#b0871e] hover:to-[#cda028] text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-md hover:scale-102 active:scale-95 transition-all"
+          >
+            <CheckCircle2 className="w-4 h-4 text-slate-950" />
+            <span>Confirmer ma Présence</span>
+          </button>
+        </div>
+      </div>
+
       {/* Quick Navigation Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+        <button
+          onClick={() => onSelectTab('pastor')}
+          className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/60 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/20 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Espace Pasteur</h3>
+              <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">CHAIRE</span>
+            </div>
+            <p className="text-[10px] text-amber-200/90 line-clamp-1">Cultes & Rapports</p>
+          </div>
+        </button>
+
         <button
           onClick={() => onSelectTab('portes')}
           className="bg-gradient-to-br from-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/40 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
@@ -94,6 +145,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-[#0A3D36] rounded">LIVRE</span>
             </div>
             <p className="text-[10px] text-emerald-100 line-clamp-1">Transformer une Nation</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('tribus')}
+          className="bg-white p-4 rounded-3xl border border-amber-300 hover:border-[#C59A27] shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-[#C59A27] flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Crown className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#0A3D36]">Les Tribus</h3>
+              <span className="px-1.5 py-0.2 text-[8px] font-black bg-amber-100 text-amber-900 rounded">12</span>
+            </div>
+            <p className="text-[10px] text-slate-500">Patriarches & Membres</p>
           </div>
         </button>
 
@@ -257,6 +324,152 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </p>
               </div>
             </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Les 12 Tribus (Ruben, Siméon, Lévi, Juda, Dan, Nephtali, Gad, Aser, Issacar, Zabulon, Joseph, Benjamin) */}
+      <div className="bg-gradient-to-br from-white via-amber-50/20 to-white p-5 sm:p-7 rounded-3xl border border-amber-200/80 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/40 text-[#0A3D36] text-[11px] font-black uppercase tracking-wider">
+              <Crown className="w-3.5 h-3.5 text-[#C59A27]" />
+              <span>Organisation Communautaire • 12 Tribus</span>
+            </div>
+            <h2 className="text-lg sm:text-2xl font-black text-[#0A3D36]">
+              Les 12 Tribus & Leurs Chefs Spirituels
+            </h2>
+            <p className="text-xs text-slate-600 max-w-2xl">
+              Chaque tribu est conduite par un <strong>Patriarche</strong> ou une <strong>Matriarche</strong>. Inscrivez-vous dans votre tribu avec votre nom, prénom, quartier, numéro et photo de profil.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onSelectTab('tribus')}
+            className="px-4 py-2.5 rounded-xl bg-[#0A3D36] hover:bg-[#135E54] text-white text-xs font-black shadow-xs flex items-center gap-2 self-start sm:self-center transition-all hover:scale-102 active:scale-95"
+          >
+            <span>Voir toutes les Tribus</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#C59A27]" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+          {INITIAL_TRIBES.map((tribe, idx) => (
+            <button
+              key={tribe.id}
+              type="button"
+              onClick={() => {
+                if (onSelectTribe) onSelectTribe(tribe.id);
+                else onSelectTab('tribus');
+              }}
+              className="p-3.5 rounded-2xl bg-white hover:bg-amber-50/50 border border-slate-200/80 hover:border-[#C59A27] transition-all text-left flex flex-col justify-between group active:scale-95 shadow-2xs hover:shadow-xs"
+            >
+              <div className="flex items-center justify-between w-full mb-2">
+                <span className="w-6 h-6 rounded-lg bg-[#0A3D36] text-[#C59A27] text-[11px] font-black flex items-center justify-center">
+                  {idx + 1}
+                </span>
+                <span className="text-[10px] font-black text-[#C59A27] uppercase tracking-wider">
+                  {tribe.leader ? tribe.leader.title : 'Tribu'}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-sm font-black text-slate-900 group-hover:text-[#0A3D36]">
+                  {tribe.name}
+                </h4>
+                {tribe.leader ? (
+                  <p className="text-[11px] text-slate-600 truncate flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-[#C59A27] shrink-0" />
+                    <span className="truncate font-semibold">{tribe.leader.prenom} {tribe.leader.nom}</span>
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400">Chef à désigner</p>
+                )}
+                <p className="text-[10px] text-slate-500 truncate">
+                  📍 {tribe.leader?.quartier || 'Abidjan'}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-[#0A3D36]">
+                <span>Rejoindre</span>
+                <ArrowRight className="w-3 h-3 text-[#C59A27] group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Les Familles d'Honneur (Cellules de Proximité Géolocalisées - Cotonou & Environs) */}
+      <div className="bg-gradient-to-br from-[#0A3D36] via-[#135E54] to-[#0A3D36] text-white p-6 sm:p-8 rounded-3xl border border-[#C59A27]/40 shadow-lg space-y-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#C59A27]/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/40 text-[#E5B22F] text-[11px] font-black uppercase tracking-wider">
+              <Users className="w-3.5 h-3.5" />
+              <span>Cellules de Proximité • Rencontres Fin de Mois</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white">
+              Les Familles d'Honneur
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+              Des foyers fraternels accueillants dans les quartiers de <strong>Cotonou (Fidjrossè, Akpakpa, Cadjèhoun, Menontin, Agla, Haie Vive)</strong> et environs <strong>(Calavi, Godomey, Sèmè)</strong> pour se rassembler chaque fin de mois dans la paix et la joie de Christ.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onSelectTab('familles_honneur')}
+            className="px-4 py-2.5 rounded-xl bg-[#C59A27] hover:bg-[#E5B22F] text-slate-950 text-xs font-black shadow-md flex items-center gap-2 self-start sm:self-center transition-all hover:scale-102 active:scale-95 shrink-0"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Trouver ma Famille d'Honneur</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* 3 Featured Familles cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1 relative z-10">
+          {INITIAL_FAMILLES_HONNEUR.slice(0, 3).map((fh) => (
+            <div
+              key={fh.id}
+              onClick={() => onSelectTab('familles_honneur')}
+              className="bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-2xl p-3.5 border border-white/15 hover:border-[#C59A27]/60 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div className="space-y-2">
+                <div className="h-28 rounded-xl overflow-hidden relative">
+                  <img
+                    src={fh.photoFamilleUrl || fh.hotePhotoUrl}
+                    alt={fh.nom}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#0A3D36]/90 text-white backdrop-blur border border-[#C59A27]/40">
+                    {fh.quartier}
+                  </div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-black text-[#E5B22F] uppercase tracking-wider">
+                    {fh.nomFamille}
+                  </span>
+                  <h4 className="text-xs font-black text-white group-hover:text-[#E5B22F] transition-colors line-clamp-1">
+                    {fh.nom}
+                  </h4>
+                  <p className="text-[11px] text-slate-300 line-clamp-1">
+                    📍 {fh.adresseRepere}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-amber-200 font-bold">
+                <span>{fh.rencontreFrequence}</span>
+                <span className="flex items-center gap-1 text-white group-hover:text-[#E5B22F]">
+                  Itinéraire & Inscription
+                  <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+            </div>
           ))}
         </div>
       </div>

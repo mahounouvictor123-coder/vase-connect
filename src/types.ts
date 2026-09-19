@@ -30,7 +30,127 @@ export interface UserProfile {
   completionScore: number; // 0 - 100%
   influenceGates?: string[]; // IDs des 12 Portes d'Influence où le membre intervient
   gateProfiles?: Record<string, GateMemberProfile>; // Profil détaillé par porte d'influence
+  tribeId?: TribeId;
+  tribeRole?: TribeRole;
   createdAt: string;
+}
+
+export type TribeId =
+  | 'ruben'
+  | 'simeon'
+  | 'levi'
+  | 'juda'
+  | 'dan'
+  | 'nephtali'
+  | 'gad'
+  | 'aser'
+  | 'issacar'
+  | 'zabulon'
+  | 'joseph'
+  | 'benjamin';
+
+export type TribeRole = 'PATRIARCHE' | 'MATRIARCHE' | 'MEMBRE' | 'RESPONSABLE';
+
+export interface TribeLeader {
+  title: 'Patriarche' | 'Matriarche';
+  nom: string;
+  prenom: string;
+  phone: string;
+  quartier: string;
+  photoUrl: string;
+  assignedAt?: string;
+  bio?: string;
+}
+
+export interface TribeMember {
+  id: string;
+  tribeId: TribeId;
+  nom: string;
+  prenom: string;
+  numero: string;
+  quartier: string;
+  photoUrl: string;
+  roleInTribe: TribeRole;
+  registeredAt: string;
+  userId?: string;
+}
+
+export interface TribeInfo {
+  id: TribeId;
+  name: string;
+  biblicalMeaning: string;
+  propheticBlessing: string;
+  symbol: string;
+  iconName: string;
+  color: string;
+  gradient: string;
+  description: string;
+  leader?: TribeLeader;
+}
+
+export interface FamilleReunionPhoto {
+  id: string;
+  date: string;
+  titre: string;
+  photoUrl: string;
+  description?: string;
+  publiePar: string;
+  participantsCount?: number;
+}
+
+export interface FamilleHonneur {
+  id: string;
+  nom: string;
+  nomFamille: string;
+  quartier: string;
+  commune: string;
+  adresseRepere: string;
+  latitude: number;
+  longitude: number;
+  // Berger (Leader spirituel de la cellule)
+  bergerNom: string;
+  bergerPrenom?: string;
+  bergerRole?: string;
+  bergerPhone: string;
+  bergerWhatsapp: string;
+  bergerPhotoUrl: string;
+  // Hôte (Foyer d'accueil)
+  hoteNom: string;
+  hotePrenom: string;
+  hoteRole: string;
+  hotePhone: string;
+  hoteWhatsapp: string;
+  hotePhotoUrl?: string;
+  // Cadre & Maison
+  photoMaisonUrl?: string;
+  photoFamilleUrl?: string;
+  // Photos de réunions post-rencontre
+  photosReunions?: FamilleReunionPhoto[];
+  rencontreFrequence: string;
+  rencontreHeure: string;
+  prochaineDate: string;
+  capaciteAccueil: number;
+  description: string;
+  programmeAccueil: string[];
+  membresInscritsCount: number;
+  actif: boolean;
+  distanceKm?: number;
+  createdAt: string;
+}
+
+export interface FamilleHonneurInscription {
+  id: string;
+  familleId: string;
+  userId?: string;
+  nom: string;
+  prenom: string;
+  telephone: string;
+  whatsapp?: string;
+  quartier: string;
+  profession?: string;
+  statutMembre?: 'MEMBRE_REGULIER' | 'NOUVEAU_CONVERTI' | 'VISITEUR' | 'RESPONSABLE_ACCUEIL' | 'BENEVOLE';
+  dateInscription: string;
+  statut: 'INSCRIT' | 'PARTICIPANT_ACTIF' | 'INVITE';
 }
 
 export type InfluenceGateId =
@@ -263,3 +383,128 @@ export interface AppNotification {
 }
 
 export type NotificationItem = AppNotification;
+
+// ==========================================
+// ESPACE PASTEUR : RÉSUMÉS, RAPPORTS & INBOX
+// ==========================================
+
+export interface CulteResumeStatistiques {
+  totalPresents: number;
+  hommes: number;
+  femmes: number;
+  enfants: number;
+  nouveauxVenus: number;
+  conversions: number;
+  baptemesOuRecons?: number;
+}
+
+export type CulteServiceType = 'CULTE_1_07H30' | 'CULTE_2_10H30';
+
+export interface CultePresenceRecord {
+  id: string;
+  dateDimanche: string; // Format YYYY-MM-DD
+  culte: CulteServiceType;
+  culteLabel: string; // "1er Culte (07h30)" ou "2ème Culte (10h30)"
+  memberId?: string;
+  nom: string;
+  prenom: string;
+  telephone: string;
+  tribeId: TribeId;
+  tribeName: string;
+  quartier?: string;
+  statutMembre: 'MEMBRE_REGULIER' | 'NOUVEAU_CONVERTI' | 'VISITEUR' | 'OUVRIER' | 'RESPONSABLE';
+  confirmeAt: string;
+  source: 'LIEN_MEMBRE' | 'PASTEUR_MANUEL';
+  notes?: string;
+}
+
+export interface CulteResume {
+  id: string;
+  date: string;
+  typeCulte: string;
+  theme: string;
+  orateur: string;
+  passageBiblique: string;
+  pointsCles: string[];
+  statistiques: CulteResumeStatistiques;
+  temoignagesMarquants: string[];
+  notesPastorales?: string;
+  createdAt: string;
+  authorId: string;
+  authorName: string;
+}
+
+export interface RapportTemplateField {
+  id: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'boolean' | 'photo';
+  placeholder?: string;
+  required: boolean;
+  options?: string[];
+  section?: string;
+}
+
+export interface RapportTemplate {
+  id: string;
+  titre: string;
+  categorie: 'TRIBU' | 'DEPARTEMENT' | 'FAMILLE_HONNEUR' | 'MISSION_EVANGELISATION' | 'PERSONNALISE';
+  description: string;
+  icone: string;
+  elementsObligatoires: string[];
+  champs: RapportTemplateField[];
+  createdAt: string;
+}
+
+export interface RapportReponsePastorale {
+  date: string;
+  note: string;
+  pasteurNom: string;
+  priereOuBenediction?: string;
+}
+
+export interface RapportSoumis {
+  id: string;
+  templateId: string;
+  templateTitre: string;
+  categorie: 'TRIBU' | 'DEPARTEMENT' | 'FAMILLE_HONNEUR' | 'MISSION_EVANGELISATION' | 'PERSONNALISE';
+  entiteConcernee: string;
+  auteurId: string;
+  auteurNom: string;
+  auteurRole: string;
+  auteurTelephone: string;
+  auteurPhotoUrl?: string;
+  dateRapport: string;
+  periode: string;
+  valeurs: Record<string, any>;
+  statut: 'NOUVEAU' | 'LU' | 'EN_COURS' | 'VALIDE' | 'ANNOTATION_PASTORALE' | 'ARCHIVE';
+  reponsePastorale?: RapportReponsePastorale;
+  photos?: string[];
+  urgente: boolean;
+  createdAt: string;
+}
+
+export interface RapportSpecialSynthese {
+  sectionTitre: string;
+  contenu: string;
+  chiffreCle?: string;
+}
+
+export interface RapportSpecial {
+  id: string;
+  titre: string;
+  periode: string;
+  introduction: string;
+  statistiquesGlobales: {
+    totalParticipants?: number;
+    nouvellesAmes?: number;
+    tribusActives?: number;
+    famillesActives?: number;
+    departementsMobilises?: number;
+  };
+  syntheses: RapportSpecialSynthese[];
+  directivesPastorales: string[];
+  recommandations?: string;
+  dateGeneration: string;
+  partageFormat: 'TEXTE' | 'WHATSAPP' | 'IMPRESSION';
+}
+

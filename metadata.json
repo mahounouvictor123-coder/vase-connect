@@ -1,6 +1,6 @@
 {
   "name": "Vases Connect",
-  "description": "Plateforme communautaire intelligente de Vases d’Honneur pour connecter les talents, les besoins et les opportunités.",
-  "requestFramePermissions": [],
+  "description": "Plateforme communautaire intelligente de Vases d’Honneur pour connecter les talents, les besoins, les 12 Portes d'Influence et les 12 Tribus.",
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

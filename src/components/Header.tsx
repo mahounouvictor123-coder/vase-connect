@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
-import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home } from 'lucide-react';
+import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen } from 'lucide-react';
 import { UserProfile, Role, AppNotification } from '../types';
 
 interface HeaderProps {
@@ -60,7 +60,11 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="hidden lg:flex items-center gap-1 mx-2">
           {[
             { id: 'accueil', label: 'Accueil' },
+            { id: 'pastor', label: 'Espace Pasteur 📖' },
+            { id: 'presence_culte', label: 'Pointage Culte 🙏' },
+            { id: 'familles_honneur', label: "Familles d'Honneur 📍" },
             { id: 'portes', label: '12 Portes d\'Influence' },
+            { id: 'tribus', label: '12 Tribus' },
             { id: 'membres', label: 'Annuaire' },
             { id: 'market', label: 'Market' },
             { id: 'opportunites', label: 'Emplois' },
@@ -74,6 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
               className={`px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
                 activeTab === tab.id
                   ? 'bg-[#0A3D36] text-white shadow-xs'
+                  : tab.id === 'pastor'
+                  ? 'text-[#0A3D36] bg-amber-50 hover:bg-amber-100/80 border border-[#C59A27]/40'
                   : 'text-slate-600 hover:text-[#0A3D36] hover:bg-slate-100'
               }`}
             >
@@ -218,12 +224,45 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="pt-2 flex flex-col gap-1">
                     <button
                       onClick={() => {
+                        onSelectTab('pastor');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left text-xs py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-[#0A3D36] font-bold flex items-center justify-between border border-[#C59A27]/30"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-[#C59A27]" />
+                        <span>Espace Pasteur & Rapports</span>
+                      </div>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#C59A27] text-slate-950 font-black">CHAIRE</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         onSelectTab('profil');
                         setShowUserMenu(false);
                       }}
                       className="w-full text-left text-xs py-1.5 px-2 rounded-lg hover:bg-slate-50 text-[#0A3D36] font-medium"
                     >
                       Voir mon profil & opportunités
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSelectTab('tribus');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left text-xs py-1.5 px-2 rounded-lg hover:bg-slate-50 text-[#0A3D36] font-medium flex items-center gap-1.5"
+                    >
+                      <Crown className="w-3.5 h-3.5 text-[#C59A27]" />
+                      Les 12 Tribus & Chefs
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSelectTab('familles_honneur');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left text-xs py-1.5 px-2 rounded-lg hover:bg-slate-50 text-[#0A3D36] font-medium flex items-center gap-1.5"
+                    >
+                      <Users className="w-3.5 h-3.5 text-[#C59A27]" />
+                      Familles d'Honneur
                     </button>
                     {currentUser.role === 'ADMIN' && (
                       <button
