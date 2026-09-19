@@ -14,6 +14,10 @@ import {
   ExternalLink,
   Link2,
   Send,
+  ChevronUp,
+  ChevronDown,
+  Edit2,
+  AlertCircle,
 } from 'lucide-react';
 import { RapportTemplate, RapportTemplateField } from '../../types';
 
@@ -66,35 +70,78 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
   >('text');
   const [newRequired, setNewRequired] = useState(true);
   const [newPlaceholder, setNewPlaceholder] = useState('');
+  const [fieldAddedSuccess, setFieldAddedSuccess] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
   const [submitted, setSubmitted] = useState(false);
   const [createdTemplate, setCreatedTemplate] = useState<RapportTemplate | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleAddField = () => {
-    if (!newLabel.trim()) return;
+  const handleAddField = (
+    customLabel?: string,
+    customType?: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'boolean' | 'photo',
+    customPlaceholder?: string
+  ) => {
+    const rawLabel = customLabel !== undefined ? customLabel : newLabel;
+    const labelToAdd = rawLabel.trim() || `Élément ${champs.length + 1}`;
+    const typeToAdd = customType || newType;
+    const placeholderToAdd = (customPlaceholder !== undefined ? customPlaceholder : newPlaceholder).trim();
+
     const newField: RapportTemplateField = {
-      id: 'field_' + Date.now(),
-      label: newLabel.trim(),
-      type: newType,
+      id: 'field_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      label: labelToAdd,
+      type: typeToAdd,
       required: newRequired,
-      placeholder: newPlaceholder.trim() || undefined,
+      placeholder: placeholderToAdd || undefined,
     };
+
     setChamps(prev => [...prev, newField]);
     setNewLabel('');
     setNewPlaceholder('');
     setNewRequired(true);
+    setFieldAddedSuccess(true);
+    setTimeout(() => setFieldAddedSuccess(false), 2500);
   };
 
   const handleRemoveField = (id: string) => {
     setChamps(prev => prev.filter(c => c.id !== id));
   };
 
+  const handleMoveField = (index: number, direction: 'up' | 'down') => {
+    setChamps(prev => {
+      const next = [...prev];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  const handleUpdateField = (id: string, updates: Partial<RapportTemplateField>) => {
+    setChamps(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titre.trim() || champs.length === 0) return;
+    if (!titre.trim()) return;
 
-    const elementsObligatoires = champs
+    // Si l'utilisateur a tapé un texte dans "newLabel" sans cliquer sur Ajouter, on l'ajoute automatiquement !
+    let finalChamps = [...champs];
+    if (newLabel.trim()) {
+      finalChamps.push({
+        id: 'field_' + Date.now(),
+        label: newLabel.trim(),
+        type: newType,
+        required: newRequired,
+        placeholder: newPlaceholder.trim() || undefined,
+      });
+    }
+
+    if (finalChamps.length === 0) return;
+
+    const elementsObligatoires = finalChamps
       .filter(c => c.required)
       .map(c => c.label);
 
@@ -115,7 +162,7 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
           : 'Layers',
       elementsObligatoires:
         elementsObligatoires.length > 0 ? elementsObligatoires : [titre.trim()],
-      champs,
+      champs: finalChamps,
       createdAt: new Date().toISOString(),
     };
 
@@ -303,57 +350,153 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
               <div className="flex items-center justify-between">
                 <h4 className="font-black uppercase text-[#0A3D36] tracking-wider flex items-center gap-1.5 text-[11px]">
                   <Sparkles className="w-4 h-4 text-[#C59A27]" />
-                  <span>2. Éléments qui doivent y figurer ({champs.length})</span>
+                  <span>2. Éléments & Questions qui doivent y figurer ({champs.length})</span>
                 </h4>
-                <span className="text-[10px] text-slate-500 italic">
-                  Définissez précisément chaque champ requis
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {champs.length} champ{champs.length > 1 ? 's' : ''} configuré{champs.length > 1 ? 's' : ''}
                 </span>
               </div>
+
+              {/* Feedback toast quand un élément est ajouté */}
+              {fieldAddedSuccess && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Nouvel élément ajouté avec succès à la liste !</span>
+                </div>
+              )}
 
               {/* Liste des champs actuels */}
               <div className="space-y-2">
                 {champs.map((champ, idx) => (
                   <div
                     key={champ.id}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs"
+                    className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 transition-colors flex items-center justify-between gap-3 text-xs"
                   >
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
                       <span className="w-5 h-5 rounded-md bg-[#0A3D36] text-[#E5B22F] text-[10px] font-black flex items-center justify-center shrink-0">
                         {idx + 1}
                       </span>
-                      <div className="truncate">
-                        <span className="font-black text-slate-900">{champ.label}</span>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                          <span className="uppercase font-semibold text-[#0A3D36]">
-                            Type: {champ.type}
-                          </span>
-                          {champ.required && (
-                            <span className="text-amber-700 font-bold">• Obligatoire</span>
-                          )}
-                          {champ.placeholder && (
-                            <span className="truncate italic">« {champ.placeholder} »</span>
-                          )}
+
+                      {editingFieldId === champ.id ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            defaultValue={champ.label}
+                            onBlur={e => {
+                              if (e.target.value.trim()) {
+                                handleUpdateField(champ.id, { label: e.target.value.trim() });
+                              }
+                              setEditingFieldId(null);
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if ((e.target as HTMLInputElement).value.trim()) {
+                                  handleUpdateField(champ.id, {
+                                    label: (e.target as HTMLInputElement).value.trim(),
+                                  });
+                                }
+                                setEditingFieldId(null);
+                              }
+                            }}
+                            autoFocus
+                            className="px-2 py-1 rounded-lg border border-[#0A3D36] text-xs font-bold text-slate-900 bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEditingFieldId(null)}
+                            className="px-2 py-1 bg-[#0A3D36] text-white text-[10px] font-bold rounded-md"
+                          >
+                            OK
+                          </button>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="truncate flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-slate-900 truncate">{champ.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingFieldId(champ.id)}
+                              className="text-slate-400 hover:text-slate-700 p-0.5"
+                              title="Modifier le nom de l'élément"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                            <span className="uppercase font-semibold text-[#0A3D36] bg-[#0A3D36]/10 px-1.5 py-0.2 rounded">
+                              {champ.type}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleUpdateField(champ.id, { required: !champ.required })
+                              }
+                              className={`px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                champ.required
+                                  ? 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                                  : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                              }`}
+                              title="Cliquer pour basculer obligatoire / facultatif"
+                            >
+                              {champ.required ? '• Obligatoire' : '• Facultatif'}
+                            </button>
+                            {champ.placeholder && (
+                              <span className="truncate italic text-slate-400">
+                                « {champ.placeholder} »
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveField(champ.id)}
-                      className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                      title="Supprimer cet élément"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Boutons monter / descendre */}
+                      <button
+                        type="button"
+                        onClick={() => handleMoveField(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20 hover:bg-white rounded transition-colors"
+                        title="Monter"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveField(idx, 'down')}
+                        disabled={idx === champs.length - 1}
+                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-20 hover:bg-white rounded transition-colors"
+                        title="Descendre"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Supprimer */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveField(champ.id)}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors ml-1"
+                        title="Supprimer cet élément"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
 
               {/* Formulaire d'ajout d'un nouvel élément */}
-              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2.5">
-                <span className="font-black text-slate-800 text-[11px] block">
-                  + Ajouter un élément à cette fenêtre de rapport
-                </span>
+              <div className="p-3.5 rounded-2xl bg-amber-50/80 border-2 border-amber-300/80 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-[#0A3D36] text-xs flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-[#C59A27]" />
+                    <span>Ajouter un nouvel élément personnalisé à la fenêtre :</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-semibold">
+                    (Appuyez sur Entrée ou cliquez sur Ajouter)
+                  </span>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div className="sm:col-span-2">
@@ -361,15 +504,22 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
                       type="text"
                       value={newLabel}
                       onChange={e => setNewLabel(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleAddField();
+                        }
+                      }}
                       placeholder="Nom de l'élément (ex: Nombre de décisions pour Christ, Lieu exact...)"
-                      className="w-full px-3 py-1.5 rounded-xl border border-amber-300 bg-white text-xs focus:ring-2 focus:ring-[#0A3D36]"
+                      className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-900 focus:ring-2 focus:ring-[#0A3D36] outline-none shadow-inner"
                     />
                   </div>
                   <div>
                     <select
                       value={newType}
                       onChange={e => setNewType(e.target.value as any)}
-                      className="w-full px-3 py-1.5 rounded-xl border border-amber-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-[#0A3D36]"
+                      className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-[#0A3D36] outline-none"
                     >
                       <option value="text">Texte court</option>
                       <option value="textarea">Texte long / Description</option>
@@ -381,31 +531,128 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
                   <input
                     type="text"
                     value={newPlaceholder}
                     onChange={e => setNewPlaceholder(e.target.value)}
-                    placeholder="Indication / consigne dans la case (optionnel)"
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-amber-200 bg-white text-xs focus:ring-2 focus:ring-[#0A3D36]"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddField();
+                      }
+                    }}
+                    placeholder="Indication dans la case (ex: « Tapez ici... » - optionnel)"
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-amber-200 bg-white text-xs focus:ring-2 focus:ring-[#0A3D36] outline-none"
                   />
-                  <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={newRequired}
-                      onChange={e => setNewRequired(e.target.checked)}
-                      className="rounded text-[#0A3D36] focus:ring-[#0A3D36]"
-                    />
-                    <span>Obligatoire</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddField}
-                    className="px-3 py-1.5 rounded-xl bg-[#0A3D36] hover:bg-[#135E54] text-white text-xs font-black shadow-xs flex items-center gap-1 shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-[#E5B22F]" />
-                    <span>Ajouter</span>
-                  </button>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={newRequired}
+                        onChange={e => setNewRequired(e.target.checked)}
+                        className="rounded text-[#0A3D36] focus:ring-[#0A3D36] w-4 h-4 cursor-pointer"
+                      />
+                      <span>Obligatoire</span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddField();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#0A3D36] hover:bg-[#135E54] active:bg-[#072823] text-white text-xs font-black shadow-md hover:scale-102 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 text-[#E5B22F]" />
+                      <span>+ Ajouter à la liste</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Suggestions d'éléments en 1 clic */}
+                <div className="pt-2 border-t border-amber-200/60">
+                  <span className="text-[10px] font-bold text-slate-600 block mb-1.5">
+                    💡 Suggestions rapides d'éléments (cliquez pour ajouter directement) :
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAddField("Nombre d'âmes touchées / conversions", 'number', 'Ex: 12')
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-[#C59A27]" />
+                      <span>✝️ Âmes / Conversions</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAddField('Offrandes ou Dons collectés (FCFA)', 'number', 'Ex: 25000')
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-[#C59A27]" />
+                      <span>💰 Offrandes / Dons</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAddField("Photo ou preuve de l'activité", 'photo', 'Importer une photo')
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-[#C59A27]" />
+                      <span>📸 Photo / Preuve</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAddField(
+                          'Difficultés et besoins spirituels ou matériels',
+                          'textarea',
+                          'Détaillez vos besoins...'
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-[#C59A27]" />
+                      <span>⚠️ Besoins & Difficultés</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAddField(
+                          'Requêtes de prière et intercession',
+                          'textarea',
+                          'Sujets confiés...'
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-[#C59A27]" />
+                      <span>🙏 Requêtes de prière</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAddField('Date de la prochaine rencontre', 'date')
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-slate-800 border border-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-[#C59A27]" />
+                      <span>📅 Date prochaine</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -22,6 +22,8 @@ import {
   Filter,
   BarChart3,
   Flame,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   CultePresenceRecord,
@@ -31,6 +33,13 @@ import {
   TribeId,
   UserProfile,
 } from '../../types';
+import {
+  computeMemberAssiduity,
+  doesPresenceMatchMember,
+  generatePastoralWhatsAppLink,
+  getAllSundayDates,
+  isMemberPresentOnSunday,
+} from '../../utils/presenceUtils';
 
 interface CultePresencesManagerProps {
   presences: CultePresenceRecord[];
@@ -57,7 +66,9 @@ export const CultePresencesManager: React.FC<CultePresencesManagerProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(SUNDAY_CURRENT);
   const [selectedCulteFilter, setSelectedCulteFilter] = useState<'TOUS' | CulteServiceType>('TOUS');
   const [selectedTribeFilter, setSelectedTribeFilter] = useState<'TOUTES' | TribeId>('TOUTES');
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'presents' | 'absents'>('all');
+  const [activeSubTab, setActiveSubTab] = useState<
+    'tribes' | 'all_absents' | 'chronic_absents' | 'all_presents'
+  >('tribes');
   const [searchMemberQuery, setSearchMemberQuery] = useState('');
 
   // États pour les retours visuels
@@ -162,6 +173,26 @@ export const CultePresencesManager: React.FC<CultePresencesManagerProps> = ({
   const totalAbsentsIdentifies = useMemo(() => {
     return tribeStats.reduce((acc, curr) => acc + curr.absentsCount, 0);
   }, [tribeStats]);
+
+  // Tous les dimanches disponibles
+  const allSundays = useMemo(() => getAllSundayDates(presences), [presences]);
+
+  // Tous les membres absents du dimanche sélectionné (filtrés par tribu sélectionnée)
+  const allAbsentsList = useMemo(() => {
+    return tribeMembers.filter(member => {
+      if (selectedTribeFilter !== 'TOUTES' && member.tribeId !== selectedTribeFilter) return false;
+      const isPresent = datePresences.some(p => doesPresenceMatchMember(p, member));
+      return !isPresent;
+    });
+  }, [tribeMembers, selectedTribeFilter, datePresences]);
+
+  // Membres qui ne viennent plus depuis un moment (2 dimanches consécutifs d'absence ou plus)
+  const chronicAbsentsList = useMemo(() => {
+    return tribeMembers
+      .map(m => computeMemberAssiduity(m, presences, allSundays))
+      .filter(p => p.isChronicAbsent)
+      .filter(p => selectedTribeFilter === 'TOUTES' || p.member.tribeId === selectedTribeFilter);
+  }, [tribeMembers, presences, allSundays, selectedTribeFilter]);
 
   // URL du lien généré pour les membres
   const generatedLink = useMemo(() => {
@@ -470,32 +501,62 @@ export const CultePresencesManager: React.FC<CultePresencesManagerProps> = ({
       </div>
 
       {/* 3. Statistiques & KPIs Pastoraux Globaux */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-1">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5 text-slate-400" />
             <span>Inscrits Tribus</span>
           </div>
           <div className="text-2xl font-black text-slate-900">{totalInscrits}</div>
-          <div className="text-[10px] text-slate-400">Effectif total référencé</div>
+          <div className="text-[10px] text-slate-400">Effectif total</div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-emerald-200/80 bg-emerald-50/20 shadow-xs space-y-1">
-          <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Présents Confirmés</span>
+        <div
+          onClick={() => setActiveSubTab('all_presents')}
+          className={`rounded-2xl p-4 border shadow-xs space-y-1 cursor-pointer transition-all ${
+            activeSubTab === 'all_presents'
+              ? 'bg-emerald-700 text-white border-emerald-700'
+              : 'bg-white border-emerald-200/80 bg-emerald-50/20 hover:border-emerald-300'
+          }`}
+        >
+          <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Présents</span>
           </div>
-          <div className="text-2xl font-black text-emerald-700">{totalPresents}</div>
-          <div className="text-[10px] text-emerald-600 font-medium">Au(x) culte(s) sélectionné(s)</div>
+          <div className="text-2xl font-black">{totalPresents}</div>
+          <div className="text-[10px] opacity-75">Confirmés au culte</div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-rose-200/80 bg-rose-50/20 shadow-xs space-y-1">
-          <div className="text-[11px] font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
-            <UserX className="w-3.5 h-3.5 text-rose-600" />
-            <span>Absents Dénotés</span>
+        <div
+          onClick={() => setActiveSubTab('all_absents')}
+          className={`rounded-2xl p-4 border shadow-xs space-y-1 cursor-pointer transition-all ${
+            activeSubTab === 'all_absents'
+              ? 'bg-rose-700 text-white border-rose-700'
+              : 'bg-white border-rose-200/80 bg-rose-50/20 hover:border-rose-300'
+          }`}
+        >
+          <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <UserX className="w-3.5 h-3.5" />
+            <span>Absents Dimanche</span>
           </div>
-          <div className="text-2xl font-black text-rose-700">{totalAbsentsIdentifies}</div>
-          <div className="text-[10px] text-rose-600 font-medium">À relancer ce dimanche</div>
+          <div className="text-2xl font-black">{totalAbsentsIdentifies}</div>
+          <div className="text-[10px] opacity-75">Non pointés ce jour</div>
+        </div>
+
+        <div
+          onClick={() => setActiveSubTab('chronic_absents')}
+          className={`rounded-2xl p-4 border shadow-xs space-y-1 cursor-pointer transition-all ${
+            activeSubTab === 'chronic_absents'
+              ? 'bg-red-800 text-white border-red-800'
+              : 'bg-red-50/70 border-red-300 text-red-900 hover:border-red-400'
+          }`}
+        >
+          <div className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+            <span>Ne viennent plus</span>
+          </div>
+          <div className="text-2xl font-black">{chronicAbsentsList.length}</div>
+          <div className="text-[10px] font-bold opacity-75">2+ dimanches manqués</div>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-amber-200/80 shadow-xs space-y-1">
@@ -519,10 +580,75 @@ export const CultePresencesManager: React.FC<CultePresencesManagerProps> = ({
         <div className="bg-white rounded-2xl p-4 border border-[#C59A27]/40 shadow-xs space-y-1">
           <div className="text-[11px] font-bold text-[#0A3D36] uppercase tracking-wider flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-[#C59A27]" />
-            <span>Taux de Présence</span>
+            <span>Taux Présence</span>
           </div>
           <div className="text-2xl font-black text-[#0A3D36]">{tauxPresence}%</div>
-          <div className="text-[10px] text-[#C59A27] font-bold">Mobilisation globale</div>
+          <div className="text-[10px] text-[#C59A27] font-bold">Mobilisation</div>
+        </div>
+      </div>
+
+      {/* 4. Barre d'Onglets de Suivi Dominical */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setActiveSubTab('tribes')}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeSubTab === 'tribes'
+                ? 'bg-[#0A3D36] text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5 text-[#C59A27]" />
+            <span>Dénotation par Tribus ({filteredTribeStats.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('all_absents')}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeSubTab === 'all_absents'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
+            }`}
+          >
+            <UserX className="w-3.5 h-3.5" />
+            <span>Tous les Absents du Dimanche ({allAbsentsList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('chronic_absents')}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeSubTab === 'chronic_absents'
+                ? 'bg-red-800 text-white shadow-xs'
+                : 'bg-red-50 hover:bg-red-100 text-red-900 border border-red-200'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+            <span>Ne viennent plus depuis un moment ({chronicAbsentsList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('all_presents')}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              activeSubTab === 'all_presents'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Tous les Présents ({culteFilteredPresences.length})</span>
+          </button>
+        </div>
+
+        {/* Recherche dans les membres */}
+        <div className="relative w-full sm:w-64">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchMemberQuery}
+            onChange={e => setSearchMemberQuery(e.target.value)}
+            placeholder="Rechercher un fidèle..."
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-[#C59A27] bg-slate-50 focus:bg-white"
+          />
         </div>
       </div>
 

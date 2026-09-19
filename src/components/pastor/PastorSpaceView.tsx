@@ -45,6 +45,7 @@ import { SubmitReportModal } from './SubmitReportModal';
 import { RapportDetailModal } from './RapportDetailModal';
 import { RapportSpecialModal } from './RapportSpecialModal';
 import { CultePresencesManager } from './CultePresencesManager';
+import { PastorMembersDirectory } from './PastorMembersDirectory';
 
 interface PastorSpaceViewProps {
   currentUser: UserProfile | null;
@@ -56,7 +57,7 @@ interface PastorSpaceViewProps {
   tribes?: TribeInfo[];
   tribeMembers?: TribeMember[];
   initialRapportFormId?: string;
-  initialPastorTab?: 'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences';
+  initialPastorTab?: 'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres';
   onAddCulte: (culte: CulteResume) => void;
   onAddTemplate: (template: RapportTemplate) => void;
   onAddRapport: (rapport: RapportSoumis) => void;
@@ -89,7 +90,7 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
 }) => {
   // Navigation tabs in pastor space
   const [activePastorTab, setActivePastorTab] = useState<
-    'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences'
+    'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres'
   >(initialPastorTab);
 
   // Modals
@@ -337,6 +338,23 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
             {presences.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-[#C59A27] text-slate-950 text-[10px] font-black">
                 {presences.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActivePastorTab('membres')}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              activePastorTab === 'membres'
+                ? 'bg-white text-[#0A3D36] shadow-sm'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+          >
+            <Users className="w-4 h-4 text-[#E5B22F]" />
+            <span>Effectif Total & Suivi des Brebis</span>
+            {tribeMembers.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[#C59A27] text-slate-950 text-[10px] font-black">
+                {tribeMembers.length}
               </span>
             )}
           </button>
@@ -1002,6 +1020,17 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
           onAddPresence={onAddPresence || (() => {})}
           onDeletePresence={onDeletePresence}
           onOpenPublicLink={onOpenPublicLink}
+        />
+      )}
+
+      {/* ONGLET F : EFFECTIF TOTAL DES MEMBRES & SUIVI DES BREBIS */}
+      {activePastorTab === 'membres' && (
+        <PastorMembersDirectory
+          tribeMembers={tribeMembers}
+          tribes={tribes}
+          presences={presences}
+          currentUser={currentUser}
+          onAddPresence={onAddPresence}
         />
       )}
 
