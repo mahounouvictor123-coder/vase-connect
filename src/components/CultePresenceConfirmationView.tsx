@@ -361,7 +361,7 @@ export const CultePresenceConfirmationView: React.FC<CultePresenceConfirmationVi
             </div>
 
             <div className="flex items-center gap-2">
-              {onOpenPastorSpace && (
+              {onOpenPastorSpace && currentUser?.role === 'PASTEUR' && (
                 <button
                   type="button"
                   onClick={onOpenPastorSpace}

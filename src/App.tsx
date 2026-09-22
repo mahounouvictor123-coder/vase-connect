@@ -21,6 +21,9 @@ import { InfluenceGatesView } from './components/InfluenceGatesView';
 import { TribesView } from './components/TribesView';
 import { FamillesHonneurView } from './components/FamillesHonneurView';
 import { PastorSpaceView } from './components/pastor/PastorSpaceView';
+import { PastorAccessGuard } from './components/pastor/PastorAccessGuard';
+import { InviteWelcomeModal } from './components/InviteWelcomeModal';
+import { InviteMemberModal } from './components/InviteMemberModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import {
   MOCK_CURRENT_USER,
@@ -36,6 +39,7 @@ import {
 import { INITIAL_GATE_MEMBERS } from './data/influenceGatesData';
 import { INITIAL_TRIBES, INITIAL_TRIBE_MEMBERS } from './data/tribesData';
 import { INITIAL_FAMILLES_HONNEUR, INITIAL_FAMILLE_INSCRIPTIONS } from './data/famillesHonneurData';
+import { INITIAL_DEPARTMENTS_DATA } from './data/departmentsData';
 import {
   INITIAL_CULTES_RESUMES,
   INITIAL_RAPPORT_TEMPLATES,
@@ -63,6 +67,8 @@ import {
   RapportSpecial,
   CultePresenceRecord,
   CulteServiceType,
+  DepartmentItem,
+  DepartmentMember,
 } from './types';
 
 export default function App() {
@@ -91,8 +97,95 @@ export default function App() {
   const [targetRapportFormId, setTargetRapportFormId] = useState<string | undefined>(undefined);
   const [assistantPrompt, setAssistantPrompt] = useState<string | undefined>(undefined);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isInviteWelcomeModalOpen, setIsInviteWelcomeModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmailHint, setInviteEmailHint] = useState('siloestore44@gmail.com');
   const [isCreateAdModalOpen, setIsCreateAdModalOpen] = useState(false);
   const [isProfessionalProfileModalOpen, setIsProfessionalProfileModalOpen] = useState(false);
+
+  // Departments State (with LocalStorage + initial data)
+  const [departments, setDepartments] = useState<DepartmentItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('vases_departments');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error reading departments from localStorage', e);
+    }
+    return INITIAL_DEPARTMENTS_DATA;
+  });
+
+  const handleAddDepartment = (newDept: DepartmentItem) => {
+    setDepartments(prev => {
+      const updated = [newDept, ...prev];
+      try {
+        localStorage.setItem('vases_departments', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    fetch('/api/departments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newDept),
+    }).catch(() => {});
+  };
+
+  const handleAddMemberToDepartment = (deptId: string, member: DepartmentMember) => {
+    setDepartments(prev => {
+      const updated = prev.map(d => {
+        if (d.id === deptId) {
+          const currentList = d.membersList || [];
+          const existingIdx = currentList.findIndex(m => m.id === member.id);
+          const newList = existingIdx !== -1
+            ? currentList.map((m, i) => i === existingIdx ? member : m)
+            : [member, ...currentList];
+          return {
+            ...d,
+            membersList: newList,
+            memberCount: (d.memberCount || 0) + 1,
+          };
+        }
+        return d;
+      });
+      try {
+        localStorage.setItem('vases_departments', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    fetch(`/api/departments/${deptId}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(member),
+    }).catch(() => {});
+  };
+
+  const handleUserLoginSuccess = (user: UserProfile) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem('vases_current_user', JSON.stringify(user));
+    } catch {
+      // Ignore
+    }
+    setMembers(prev => {
+      const exists = prev.some(m => m.id === user.id);
+      return exists ? prev.map(m => m.id === user.id ? user : m) : [user, ...prev];
+    });
+  };
+
+  const handleUserLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('vases_current_user');
+    } catch {
+      // Ignore
+    }
+  };
 
   const handleNavigateTab = (tab: string) => {
     setActiveTab(tab);
@@ -107,6 +200,19 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Restore persistent session from localStorage
+    try {
+      const savedUserStr = localStorage.getItem('vases_current_user');
+      if (savedUserStr) {
+        const parsed = JSON.parse(savedUserStr);
+        if (parsed && parsed.id) {
+          setCurrentUser(parsed);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
     // Synchronize browser history and physical back button
     const handlePopState = (e: PopStateEvent) => {
       if (e.state && e.state.tab) {
@@ -126,9 +232,24 @@ export default function App() {
       if (initialTab) setActiveTab(initialTab);
     }
 
-    // Check query parameters for direct report form link or tab
+    // Check query parameters for invite, direct report form link or tab
     try {
       const searchParams = new URLSearchParams(window.location.search);
+      const isInviteParam =
+        searchParams.get('invite') !== null ||
+        searchParams.get('invited') !== null ||
+        searchParams.get('join') !== null ||
+        searchParams.get('ref') !== null;
+
+      if (isInviteParam) {
+        setIsInviteWelcomeModalOpen(true);
+      }
+
+      const emailParam = searchParams.get('email');
+      if (emailParam) {
+        setInviteEmailHint(emailParam);
+      }
+
       const requestedFormId = searchParams.get('rapportForm');
       const requestedTab = searchParams.get('tab');
       const requestedDate = searchParams.get('date');
@@ -477,6 +598,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenAssistant={() => handleOpenAssistant()}
         onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenInvite={() => setIsInviteModalOpen(true)}
         notifications={notifications}
         onClearNotifications={handleClearNotifications}
         onSwitchUser={handleSwitchUser}
@@ -511,35 +633,47 @@ export default function App() {
             events={MOCK_EVENTS}
             posts={posts}
             ads={ads}
+            currentUser={currentUser}
+            onOpenInvite={() => setIsInviteModalOpen(true)}
             onOpenCreateAd={() => setIsCreateAdModalOpen(true)}
             onOpenProfessionalProfile={() => setIsProfessionalProfileModalOpen(true)}
           />
         )}
 
         {activeTab === 'pastor' && (
-          <PastorSpaceView
-            currentUser={currentUser}
-            cultes={cultes}
-            templates={rapportTemplates}
-            rapports={rapports}
-            rapportsSpeciaux={rapportsSpeciaux}
-            presences={cultesPresences}
-            tribes={tribes}
-            tribeMembers={tribeMembers}
-            initialRapportFormId={targetRapportFormId}
-            onAddCulte={handleAddCulte}
-            onAddTemplate={handleAddTemplate}
-            onAddRapport={handleAddRapport}
-            onUpdateRapport={handleUpdateRapport}
-            onAddRapportSpecial={handleAddRapportSpecial}
-            onAddPresence={handleAddCultePresence}
-            onDeletePresence={handleDeleteCultePresence}
-            onOpenPublicLink={(date, culte) => {
-              setPresenceParamDate(date);
-              setPresenceParamCulte(culte);
-              handleNavigateTab('presence_culte');
-            }}
-          />
+          currentUser?.role === 'PASTEUR' ? (
+            <PastorSpaceView
+              currentUser={currentUser}
+              cultes={cultes}
+              templates={rapportTemplates}
+              rapports={rapports}
+              rapportsSpeciaux={rapportsSpeciaux}
+              presences={cultesPresences}
+              tribes={tribes}
+              tribeMembers={tribeMembers}
+              initialRapportFormId={targetRapportFormId}
+              onAddCulte={handleAddCulte}
+              onAddTemplate={handleAddTemplate}
+              onAddRapport={handleAddRapport}
+              onUpdateRapport={handleUpdateRapport}
+              onAddRapportSpecial={handleAddRapportSpecial}
+              onAddPresence={handleAddCultePresence}
+              onDeletePresence={handleDeleteCultePresence}
+              onOpenPublicLink={(date, culte) => {
+                setPresenceParamDate(date);
+                setPresenceParamCulte(culte);
+                handleNavigateTab('presence_culte');
+              }}
+            />
+          ) : (
+            <PastorAccessGuard
+              currentUser={currentUser}
+              onBackToHome={() => handleNavigateTab('accueil')}
+              onPastorUnlocked={(pastorUser) => {
+                handleUserLoginSuccess(pastorUser);
+              }}
+            />
+          )
         )}
 
         {activeTab === 'presence_culte' && (
@@ -572,7 +706,10 @@ export default function App() {
             currentUser={currentUser}
             tribes={tribes}
             tribeMembers={tribeMembers}
+            presences={cultesPresences}
+            onAddPresence={handleAddCultePresence}
             initialTribeId={selectedTribeIdForView}
+            onSaveMember={handleSaveTribeMember}
             onSaveTribeMember={handleSaveTribeMember}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onBackToHome={() => handleNavigateTab('accueil')}
@@ -656,7 +793,11 @@ export default function App() {
 
         {activeTab === 'departements' && (
           <DepartmentsView
-            departments={MOCK_DEPARTMENTS}
+            departments={departments}
+            currentUser={currentUser}
+            existingUsers={members}
+            onAddDepartment={handleAddDepartment}
+            onAddMemberToDepartment={handleAddMemberToDepartment}
             onOpenAssistantWithPrompt={handleOpenAssistant}
             onBackToHome={() => handleNavigateTab('accueil')}
           />
@@ -675,7 +816,7 @@ export default function App() {
             products={products}
             onUpdateProfile={handleUpdateProfile}
             onOpenAuth={() => setIsAuthModalOpen(true)}
-            onLogout={() => setCurrentUser(null)}
+            onLogout={handleUserLogout}
             onSelectTab={handleNavigateTab}
             onOpenProfessionalProfile={() => setIsProfessionalProfileModalOpen(true)}
           />
@@ -709,15 +850,33 @@ export default function App() {
       {/* PWA Offline & Installation Banner */}
       <PWAInstallPrompt />
 
-      {/* Phone OTP Authentication Modal */}
+      {/* Phone & Gmail & Pastoral Authentication Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={(user) => {
-          setCurrentUser(user);
+          handleUserLoginSuccess(user);
           setIsAuthModalOpen(false);
         }}
         availableMembers={members}
+      />
+
+      {/* Member Invite Link Generation Modal */}
+      <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        currentUser={currentUser}
+      />
+
+      {/* Invite Welcome Modal for Members Arriving via Link */}
+      <InviteWelcomeModal
+        isOpen={isInviteWelcomeModalOpen}
+        onClose={() => setIsInviteWelcomeModalOpen(false)}
+        onLoginSuccess={(user) => {
+          handleUserLoginSuccess(user);
+          setIsInviteWelcomeModalOpen(false);
+        }}
+        defaultEmail={inviteEmailHint}
       />
 
       {/* Create Ad & Promotion Modal */}

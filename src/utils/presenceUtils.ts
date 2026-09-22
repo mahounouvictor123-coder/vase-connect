@@ -1,6 +1,42 @@
-import { CultePresenceRecord, CulteServiceType, TribeId, TribeInfo, TribeMember } from '../types';
+import {
+  CultePresenceRecord,
+  CulteServiceType,
+  TribeId,
+  TribeInfo,
+  TribeMember,
+} from '../types';
 
 export const KNOWN_SUNDAYS = ['2026-09-20', '2026-09-13', '2026-09-06'];
+
+/**
+ * Universal entity representing any member across compartments (Tribes, Departments, Families)
+ */
+export interface GenericMemberEntity {
+  id: string;
+  nom: string;
+  prenom: string;
+  telephone?: string;
+  numero?: string;
+  phone?: string;
+  memberId?: string;
+  userId?: string;
+  photoUrl?: string;
+  quartier?: string;
+  role?: string;
+}
+
+/**
+ * Categorized presence lists for any compartment (Present, Absent, Chronic)
+ */
+export interface CompartmentPresenceStatus<T extends GenericMemberEntity = GenericMemberEntity> {
+  all: T[];
+  presents: T[];
+  absents: T[];
+  chronicAbsents: T[];
+  presenceRatio: number; // 0 to 100%
+  selectedSunday: string;
+  matchedRecordsMap: Map<string, CultePresenceRecord>; // key: member.id, value: CultePresenceRecord
+}
 
 /**
  * Get all available distinct Sunday dates from records and defaults, sorted descending (most recent first)
@@ -25,24 +61,152 @@ export function normalizeText(text: string = ''): string {
 }
 
 /**
+ * Clean phone number to digits only
+ */
+export function cleanPhoneNumber(phone?: string): string {
+  if (!phone) return '';
+  return phone.replace(/[^0-9]/g, '');
+}
+
+/**
+ * Checks if a presence record matches any generic church member
+ * Matches by memberId/userId, telephone, or normalized (nom + prenom)
+ */
+export function doesPresenceMatchGeneric(
+  presence: CultePresenceRecord,
+  member: GenericMemberEntity
+): boolean {
+  // 1. Direct ID match
+  if (presence.memberId) {
+    if (presence.memberId === member.id || presence.memberId === member.memberId || presence.memberId === member.userId) {
+      return true;
+    }
+  }
+
+  // 2. Phone match
+  const memberPhone = cleanPhoneNumber(member.telephone || member.numero || member.phone);
+  const presencePhone = cleanPhoneNumber(presence.telephone);
+  if (presencePhone && memberPhone) {
+    if (
+      presencePhone === memberPhone ||
+      presencePhone.endsWith(memberPhone) ||
+      memberPhone.endsWith(presencePhone)
+    ) {
+      return true;
+    }
+  }
+
+  // 3. Name match (both orientations: nom + prenom OR prenom + nom)
+  const presNom = normalizeText(presence.nom);
+  const presPrenom = normalizeText(presence.prenom);
+  const memNom = normalizeText(member.nom);
+  const memPrenom = normalizeText(member.prenom);
+
+  if (!presNom || !memNom) return false;
+
+  const directMatch = presNom === memNom && presPrenom === memPrenom;
+  const invertedMatch = presNom === memPrenom && presPrenom === memNom;
+
+  return directMatch || invertedMatch;
+}
+
+/**
  * Checks if a presence record matches a given tribe member
  */
 export function doesPresenceMatchMember(
   presence: CultePresenceRecord,
   member: TribeMember
 ): boolean {
-  if (presence.memberId && presence.memberId === member.id) return true;
-  if (presence.telephone && member.numero) {
-    const cleanPresPhone = presence.telephone.replace(/[^0-9]/g, '');
-    const cleanMemPhone = member.numero.replace(/[^0-9]/g, '');
-    if (cleanPresPhone && cleanMemPhone && cleanPresPhone === cleanMemPhone) {
-      return true;
+  return doesPresenceMatchGeneric(presence, member);
+}
+
+/**
+ * Check if a generic member is confirmed present on a given date (and optionally specific service)
+ */
+export function isGenericMemberPresent(
+  member: GenericMemberEntity,
+  dateDimanche: string,
+  presences: CultePresenceRecord[] = [],
+  culteFilter?: 'TOUS' | CulteServiceType
+): boolean {
+  return presences.some((p) => {
+    if (p.dateDimanche !== dateDimanche) return false;
+    if (culteFilter && culteFilter !== 'TOUS' && p.culte !== culteFilter) return false;
+    return doesPresenceMatchGeneric(p, member);
+  });
+}
+
+/**
+ * Get the specific record for a generic member on a date
+ */
+export function getGenericMemberRecord(
+  member: GenericMemberEntity,
+  dateDimanche: string,
+  presences: CultePresenceRecord[] = []
+): CultePresenceRecord | undefined {
+  return presences.find(
+    (p) => p.dateDimanche === dateDimanche && doesPresenceMatchGeneric(p, member)
+  );
+}
+
+/**
+ * Core Cross-Compartment Presence Engine:
+ * Categorizes ANY list of members (department, tribe, family) into:
+ * - presents: members who signed their presence at church on that Sunday
+ * - absents: members who did not sign their presence
+ * - chronicAbsents: members who missed 2 or more consecutive Sundays
+ * - presenceRatio: percentage of attendance for that compartment
+ */
+export function computeCompartmentPresence<T extends GenericMemberEntity>(
+  members: T[],
+  presences: CultePresenceRecord[],
+  selectedSunday: string,
+  allSundays: string[] = KNOWN_SUNDAYS
+): CompartmentPresenceStatus<T> {
+  const presents: T[] = [];
+  const absents: T[] = [];
+  const chronicAbsents: T[] = [];
+  const matchedRecordsMap = new Map<string, CultePresenceRecord>();
+
+  // Filter presences on the selected Sunday
+  const sundayPresences = presences.filter((p) => p.dateDimanche === selectedSunday);
+
+  members.forEach((member) => {
+    const matchedRecord = sundayPresences.find((p) => doesPresenceMatchGeneric(p, member));
+    if (matchedRecord) {
+      presents.push(member);
+      matchedRecordsMap.set(member.id, matchedRecord);
+    } else {
+      absents.push(member);
     }
-  }
-  const matchNom =
-    normalizeText(presence.nom) === normalizeText(member.nom) &&
-    normalizeText(presence.prenom) === normalizeText(member.prenom);
-  return matchNom;
+
+    // Check chronic absence: missed 2 or more consecutive Sundays from the most recent
+    let consecutiveMisses = 0;
+    for (const sunday of allSundays) {
+      const isPresent = isGenericMemberPresent(member, sunday, presences);
+      if (!isPresent) {
+        consecutiveMisses++;
+      } else {
+        break;
+      }
+    }
+    if (consecutiveMisses >= 2) {
+      chronicAbsents.push(member);
+    }
+  });
+
+  const total = members.length;
+  const presenceRatio = total > 0 ? Math.round((presents.length / total) * 100) : 0;
+
+  return {
+    all: members,
+    presents,
+    absents,
+    chronicAbsents,
+    presenceRatio,
+    selectedSunday,
+    matchedRecordsMap,
+  };
 }
 
 /**

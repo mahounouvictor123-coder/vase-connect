@@ -1,10 +1,11 @@
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'RESPONSABLE' | 'MODERATEUR' | 'MEMBRE' | 'VISITEUR';
+export type Role = 'PASTEUR' | 'SUPER_ADMIN' | 'ADMIN' | 'RESPONSABLE' | 'MODERATEUR' | 'MEMBRE' | 'VISITEUR';
 
 export type AvailabilityStatus = 'DISPONIBLE' | 'OCCUPE' | 'SUR_DEMANDE' | 'EN_MISSION';
 
 export interface UserProfile {
   id: string;
   phone: string;
+  email?: string;
   phonePublic: boolean;
   addressPublic: boolean;
   proInfoPublic: boolean;
@@ -107,7 +108,7 @@ export interface FamilleHonneur {
   adresseRepere: string;
   latitude: number;
   longitude: number;
-  // Berger (Leader spirituel de la cellule)
+  // Berger (Leader spirituel de la Famille d'Honneur)
   bergerNom: string;
   bergerPrenom?: string;
   bergerRole?: string;
@@ -292,17 +293,35 @@ export interface MemberAd {
   createdAt: string;
 }
 
+export interface DepartmentMember {
+  id: string;
+  departmentId: string;
+  memberId?: string;
+  nom: string;
+  prenom: string;
+  telephone: string;
+  email?: string;
+  roleInDepartment: string; // Ex: 'Responsable', 'Adjoint', 'Chantre', 'Caméraman', 'Intercesseur', 'Protocole', 'Membre Actif'
+  dateAdhesion?: string;
+  competences?: string[];
+  photoUrl?: string;
+}
+
 export interface DepartmentItem {
   id: string;
   name: string;
   description: string;
   leaderName: string;
   leaderTitle: string;
+  leaderPhone?: string;
+  leaderEmail?: string;
+  leaderPhoto?: string;
   memberCount: number;
   iconName: string;
   bannerColor: string;
   activities: string[];
   announcements: string[];
+  membersList?: DepartmentMember[];
 }
 
 export interface CommunityPost {

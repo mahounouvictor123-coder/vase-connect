@@ -12,25 +12,37 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle,
+  CheckCircle2,
   Shield,
   BookOpen,
   Filter,
   UserCheck,
+  UserX,
+  AlertTriangle,
   Award,
   Flame,
   Sun,
   Crown as CrownIcon
 } from 'lucide-react';
-import { TribeId, TribeInfo, TribeMember, TribeRole, UserProfile } from '../types';
+import { CultePresenceRecord, CulteServiceType, TribeId, TribeInfo, TribeMember, TribeRole, UserProfile } from '../types';
 import { INITIAL_TRIBES } from '../data/tribesData';
 import { TribeRegistrationModal } from './TribeRegistrationModal';
+import {
+  computeMemberAssiduity,
+  doesPresenceMatchMember,
+  getAllSundayDates,
+  KNOWN_SUNDAYS,
+} from '../utils/presenceUtils';
 
 interface TribesViewProps {
   currentUser?: UserProfile | null;
   tribes?: TribeInfo[];
   tribeMembers: TribeMember[];
+  presences?: CultePresenceRecord[];
+  onAddPresence?: (presence: CultePresenceRecord) => Promise<void> | void;
   initialTribeId?: TribeId;
-  onSaveMember: (member: TribeMember, isLeader: boolean) => void;
+  onSaveMember?: (member: TribeMember, isLeader: boolean) => void;
+  onSaveTribeMember?: (member: TribeMember, isLeader: boolean) => void;
   onOpenAuth: () => void;
   onBackToHome?: () => void;
 }
@@ -39,8 +51,11 @@ export const TribesView: React.FC<TribesViewProps> = ({
   currentUser,
   tribes = INITIAL_TRIBES,
   tribeMembers,
+  presences = [],
+  onAddPresence,
   initialTribeId,
   onSaveMember,
+  onSaveTribeMember,
   onOpenAuth,
   onBackToHome,
 }) => {
@@ -118,6 +133,87 @@ export const TribesView: React.FC<TribesViewProps> = ({
       (m) => (m.userId === currentUser.id || m.numero === currentUser.phone) && m.tribeId === selectedTribeId
     );
   }, [currentUser, selectedTribeId, tribeMembers]);
+
+  // Suivi des Présences au Culte dans la Tribu
+  const [selectedSunday, setSelectedSunday] = useState<string>(KNOWN_SUNDAYS[0]);
+  const [presenceSubTab, setPresenceSubTab] = useState<'all' | 'absents' | 'chronic' | 'presents'>('all');
+
+  const allSundays = useMemo(() => getAllSundayDates(presences), [presences]);
+
+  const tribePresencesOnSunday = useMemo(() => {
+    return presences.filter((p) => {
+      const matchDate = p.dateDimanche === selectedSunday;
+      const matchTribe = p.tribeId === selectedTribeId;
+      const matchMember = activeTribeMembers.some((m) => doesPresenceMatchMember(p, m));
+      return matchDate && (matchTribe || matchMember);
+    });
+  }, [presences, selectedSunday, selectedTribeId, activeTribeMembers]);
+
+  const presentMembers = useMemo(() => {
+    return activeTribeMembers.filter((m) =>
+      tribePresencesOnSunday.some((p) => doesPresenceMatchMember(p, m))
+    );
+  }, [activeTribeMembers, tribePresencesOnSunday]);
+
+  const absentMembers = useMemo(() => {
+    return activeTribeMembers.filter(
+      (m) => !tribePresencesOnSunday.some((p) => doesPresenceMatchMember(p, m))
+    );
+  }, [activeTribeMembers, tribePresencesOnSunday]);
+
+  const assiduityMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeMemberAssiduity>>();
+    activeTribeMembers.forEach((m) => {
+      map.set(m.id, computeMemberAssiduity(m, presences, allSundays));
+    });
+    return map;
+  }, [activeTribeMembers, presences, allSundays]);
+
+  const chronicAbsentMembers = useMemo(() => {
+    return activeTribeMembers.filter((m) => {
+      const assid = assiduityMap.get(m.id);
+      return assid?.isChronicAbsent;
+    });
+  }, [activeTribeMembers, assiduityMap]);
+
+  // Membres affichés selon l'onglet de présence sélectionné
+  const displayedTribeMembers = useMemo(() => {
+    let list = filteredTribeMembers;
+    if (presenceSubTab === 'absents') {
+      list = list.filter((m) => absentMembers.some((a) => a.id === m.id));
+    } else if (presenceSubTab === 'chronic') {
+      list = list.filter((m) => chronicAbsentMembers.some((c) => c.id === m.id));
+    } else if (presenceSubTab === 'presents') {
+      list = list.filter((m) => presentMembers.some((p) => p.id === m.id));
+    }
+    return list;
+  }, [filteredTribeMembers, presenceSubTab, absentMembers, chronicAbsentMembers, presentMembers]);
+
+  const handleQuickMarkPresent = async (member: TribeMember, culte: CulteServiceType = 'CULTE_1_07H30') => {
+    if (!onAddPresence || !activeTribe) return;
+    const newRecord: CultePresenceRecord = {
+      id: `presence_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      dateDimanche: selectedSunday,
+      culte,
+      culteLabel: culte === 'CULTE_1_07H30' ? '1er Culte (07h30)' : '2ème Culte (10h30)',
+      memberId: member.id,
+      prenom: member.prenom,
+      nom: member.nom,
+      telephone: member.numero,
+      tribeId: activeTribe.id,
+      tribeName: activeTribe.name,
+      quartier: member.quartier,
+      statutMembre: 'MEMBRE_REGULIER',
+      source: 'PASTEUR_MANUEL',
+      confirmeAt: new Date().toISOString(),
+    };
+    await onAddPresence(newRecord);
+  };
+
+  const handleSaveFinal = (member: TribeMember, isLeader: boolean) => {
+    if (onSaveMember) onSaveMember(member, isLeader);
+    else if (onSaveTribeMember) onSaveTribeMember(member, isLeader);
+  };
 
   // Handlers
   const handleOpenRegister = (asLeader = false, memberToEdit?: TribeMember) => {
@@ -519,6 +615,111 @@ export const TribesView: React.FC<TribesViewProps> = ({
               </button>
             </div>
 
+            {/* Suivi des Présences au Culte dans la Tribu */}
+            <div className="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-xs font-black text-[#0A3D36] uppercase tracking-wider">
+                    <Calendar className="w-4 h-4 text-[#C59A27]" />
+                    <span>Pointage & Présences Dimanche • Tribu {activeTribe.name}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Les absents et fidèles ne venant plus depuis un moment sont dénotés automatiquement dès la fin des cultes.
+                  </p>
+                </div>
+
+                {/* Sélecteur de Dimanche */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs font-bold text-slate-600 shrink-0">Dimanche :</span>
+                  <select
+                    value={selectedSunday}
+                    onChange={(e) => setSelectedSunday(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white text-slate-900 focus:ring-2 focus:ring-[#C59A27]"
+                  >
+                    {allSundays.map((d) => (
+                      <option key={d} value={d}>
+                        {d === allSundays[0] ? `Dimanche ${d} (Plus récent)` : `Dimanche ${d}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Boutons d'Onglets de Présence de la Tribu */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPresenceSubTab('all')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    presenceSubTab === 'all'
+                      ? 'bg-[#0A3D36] text-white shadow-xs'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Tous les membres ({activeTribeMembers.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresenceSubTab('absents')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                    presenceSubTab === 'absents'
+                      ? 'bg-rose-700 text-white shadow-xs'
+                      : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                  }`}
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                  <span>Absents ce Dimanche ({absentMembers.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresenceSubTab('chronic')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                    presenceSubTab === 'chronic'
+                      ? 'bg-red-800 text-white shadow-xs'
+                      : 'bg-red-50 text-red-900 hover:bg-red-100 border border-red-200'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                  <span>Ne viennent plus depuis un moment ({chronicAbsentMembers.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPresenceSubTab('presents')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    presenceSubTab === 'presents'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Présents ({presentMembers.length})</span>
+                </button>
+              </div>
+
+              {/* Bannières explicatives selon onglet actif */}
+              {presenceSubTab === 'absents' && (
+                <div className="p-3 bg-rose-100/70 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2.5">
+                  <UserX className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Membres de la tribu absents au culte du {selectedSunday} ({absentMembers.length}).</strong> Dès que les présences sont renseignées chaque dimanche, cette liste s'actualise automatiquement dans votre tribu. Contactez vos frères et sœurs sur WhatsApp pour prendre de leurs nouvelles !
+                  </div>
+                </div>
+              )}
+
+              {presenceSubTab === 'chronic' && (
+                <div className="p-3 bg-red-100/80 border border-red-300 rounded-xl text-xs text-red-950 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Brebis qui ne viennent plus depuis un moment ({chronicAbsentMembers.length}).</strong> Ces membres ont manqué 2 dimanches consécutifs ou plus. Une attention fraternelle et une visite pastorale sont recommandées pour prendre soin d'eux.
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Search & Quartier Filter Bar */}
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <div className="relative flex-1 w-full">
@@ -552,20 +753,35 @@ export const TribesView: React.FC<TribesViewProps> = ({
             </div>
 
             {/* Members Cards Grid */}
-            {filteredTribeMembers.length > 0 ? (
+            {displayedTribeMembers.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredTribeMembers.map((member) => {
+                {displayedTribeMembers.map((member) => {
                   const isLeader =
                     member.roleInTribe === 'PATRIARCHE' || member.roleInTribe === 'MATRIARCHE';
                   const isCurrentUser =
                     currentUser &&
                     (member.userId === currentUser.id || member.numero === currentUser.phone);
 
+                  const isPresent = presentMembers.some((p) => p.id === member.id);
+                  const isAbsent = absentMembers.some((a) => a.id === member.id);
+                  const assid = assiduityMap.get(member.id);
+                  const isChronic = assid?.isChronicAbsent;
+
+                  const whatsappFraternelAbsent = `Bonjour bien-aimé(e) ${member.prenom}, toute la tribu ${activeTribe.name} pense à toi aujourd'hui ! Nous avons remarqué ton absence au culte ce dimanche ${selectedSunday}. Que la paix et la grâce de Dieu soient sur toi. Comment vas-tu ?`;
+                  const whatsappUrlAbsent = `https://wa.me/${member.numero.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappFraternelAbsent)}`;
+
+                  const whatsappChronic = `Bonjour bien-aimé(e) ${member.prenom}, c'est la tribu ${activeTribe.name} de la Cité Royale Siloé. Le Seigneur a mis ton nom sur notre cœur car nous avons constaté que tu ne venais plus depuis quelques dimanches. Nous voulions prendre de tes nouvelles et savoir si tout va bien. Tu es précieux(se) pour nous !`;
+                  const whatsappUrlChronic = `https://wa.me/${member.numero.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappChronic)}`;
+
                   return (
                     <div
                       key={member.id}
-                      className={`relative bg-white rounded-2xl p-5 border transition-all duration-200 hover:shadow-md flex flex-col justify-between ${
-                        isLeader
+                      className={`relative bg-white rounded-2xl p-5 border transition-all duration-200 hover:shadow-md flex flex-col justify-between space-y-4 ${
+                        isChronic
+                          ? 'border-red-300 bg-red-50/15'
+                          : isAbsent
+                          ? 'border-rose-200 bg-rose-50/10'
+                          : isLeader
                           ? 'border-[#C59A27]/50 bg-amber-50/20'
                           : isCurrentUser
                           ? 'border-emerald-300 bg-emerald-50/20'
@@ -599,6 +815,24 @@ export const TribesView: React.FC<TribesViewProps> = ({
                                   Moi
                                 </span>
                               )}
+
+                              {/* Statut de présence au culte */}
+                              {isPresent ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Présent ce dimanche</span>
+                                </span>
+                              ) : isChronic ? (
+                                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-900 text-[10px] font-black flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-red-600" />
+                                  <span>Ne vient plus ({assid?.consecutiveAbsences} d.)</span>
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold flex items-center gap-1">
+                                  <UserX className="w-3 h-3" />
+                                  <span>Absent ce dimanche</span>
+                                </span>
+                              )}
                             </div>
 
                             <h4 className="font-bold text-slate-900 text-sm sm:text-base truncate mt-1">
@@ -618,6 +852,12 @@ export const TribesView: React.FC<TribesViewProps> = ({
                             <span className="text-slate-400">Numéro :</span>
                             <span className="font-bold text-slate-800">{member.numero}</span>
                           </div>
+                          {isChronic && assid?.lastPresentDate && (
+                            <div className="flex items-center justify-between text-red-700 text-[11px] font-bold">
+                              <span>Dernier culte :</span>
+                              <span>{assid.lastPresentDate}</span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between text-slate-600">
                             <span className="text-slate-400">Inscrit le :</span>
                             <span>{member.registeredAt}</span>
@@ -625,36 +865,62 @@ export const TribesView: React.FC<TribesViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Contact and Edit Action Buttons */}
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={`tel:${member.numero.replace(/\s+/g, '')}`}
-                            className="p-2 rounded-xl bg-slate-100 hover:bg-[#0A3D36] hover:text-white text-slate-700 transition-colors"
-                            title="Appeler"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                          <a
-                            href={`https://wa.me/${member.numero.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 transition-colors"
-                            title="WhatsApp"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
+                      {/* Contact and Fraternal Outreach Action Buttons */}
+                      <div className="pt-3 border-t border-slate-100 space-y-2">
+                        {/* Si absent ou absent chronique, bouton direct de relance fraternelle */}
+                        {isAbsent && (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={isChronic ? whatsappUrlChronic : whatsappUrlAbsent}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 py-1.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>Prendre des nouvelles (WhatsApp)</span>
+                            </a>
 
-                        {isCurrentUser && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRegister(isLeader, member)}
-                            className="text-xs font-bold text-[#0A3D36] hover:underline"
-                          >
-                            Modifier
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickMarkPresent(member)}
+                              className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
+                              title="Pointer présent au culte"
+                            >
+                              + Présent
+                            </button>
+                          </div>
                         )}
+
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`tel:${member.numero.replace(/\s+/g, '')}`}
+                              className="p-2 rounded-xl bg-slate-100 hover:bg-[#0A3D36] hover:text-white text-slate-700 transition-colors"
+                              title="Appeler"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                            <a
+                              href={`https://wa.me/${member.numero.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 transition-colors"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+
+                          {isCurrentUser && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRegister(isLeader, member)}
+                              className="text-xs font-bold text-[#0A3D36] hover:underline"
+                            >
+                              Modifier
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -699,7 +965,7 @@ export const TribesView: React.FC<TribesViewProps> = ({
           existingMember={editingMember}
           isLeaderMode={modalLeaderMode}
           onSaveMember={(member, isLeader) => {
-            onSaveMember(member, isLeader);
+            handleSaveFinal(member, isLeader);
           }}
         />
       )}

@@ -182,7 +182,7 @@ export const JoinFamilleModal: React.FC<JoinFamilleModalProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Statut dans la cellule</label>
+                <label className="text-xs font-bold text-slate-700">Statut dans la Famille d'Honneur</label>
                 <select
                   value={statutMembre}
                   onChange={e => setStatutMembre(e.target.value as any)}

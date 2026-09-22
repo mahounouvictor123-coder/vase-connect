@@ -18,8 +18,8 @@ const TAB_CONFIG: Record<string, { title: string; category: string; icon?: React
     icon: <BookOpen className="w-3.5 h-3.5 text-[#E5B22F]" />,
   },
   familles_honneur: {
-    title: 'Familles d\'Honneur — Cellules de Proximité Géolocalisées',
-    category: 'Cellules de Proximité',
+    title: 'Familles d\'Honneur — Communauté & Foyers Géolocalisés',
+    category: 'Familles d\'Honneur',
     icon: <Users className="w-3.5 h-3.5 text-[#E5B22F]" />,
   },
   tribus: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ShoppingBag, Users, Briefcase, ArrowRight, CheckCircle2, MessageCircle, Calendar, MapPin, Heart, Megaphone, Tag, Store, Award, Church, GraduationCap, Scale, Landmark, Vote, Radio, Sprout, Coins, Truck, Palette, HeartPulse, ShieldAlert, Crown, BookOpen } from 'lucide-react';
+import { Sparkles, ShoppingBag, Users, Briefcase, ArrowRight, CheckCircle2, MessageCircle, Calendar, MapPin, Heart, Megaphone, Tag, Store, Award, Church, GraduationCap, Scale, Landmark, Vote, Radio, Sprout, Coins, Truck, Palette, HeartPulse, ShieldAlert, Crown, BookOpen, Share2 } from 'lucide-react';
 import { UserProfile, ProductItem, OpportunityItem, ChurchEvent, CommunityPost, MemberAd } from '../types';
 import { INFLUENCE_GATES } from '../data/influenceGatesData';
 import { INITIAL_TRIBES } from '../data/tribesData';
@@ -16,6 +16,8 @@ interface HomeViewProps {
   events: ChurchEvent[];
   posts: CommunityPost[];
   ads?: MemberAd[];
+  currentUser?: UserProfile | null;
+  onOpenInvite?: () => void;
   onOpenCreateAd?: () => void;
   onOpenProfessionalProfile?: () => void;
   onSelectGate?: (gateId: string) => void;
@@ -33,6 +35,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   events,
   posts,
   ads = [],
+  currentUser,
+  onOpenInvite,
   onOpenCreateAd,
   onOpenProfessionalProfile,
   onSelectGate,
@@ -116,21 +120,39 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Quick Navigation Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
-        <button
-          onClick={() => onSelectTab('pastor')}
-          className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/60 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
-        >
-          <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/20 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1">
-              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Espace Pasteur</h3>
-              <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">CHAIRE</span>
+        {currentUser?.role === 'PASTEUR' ? (
+          <button
+            onClick={() => onSelectTab('pastor')}
+            className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/60 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/20 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
+              <BookOpen className="w-5 h-5" />
             </div>
-            <p className="text-[10px] text-amber-200/90 line-clamp-1">Cultes & Rapports</p>
-          </div>
-        </button>
+            <div>
+              <div className="flex items-center gap-1">
+                <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Espace Pasteur</h3>
+                <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">CHAIRE</span>
+              </div>
+              <p className="text-[10px] text-amber-200/90 line-clamp-1">Cultes & Rapports</p>
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={onOpenInvite ? onOpenInvite : () => onSelectTab('presence_culte')}
+            className="bg-gradient-to-br from-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/50 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/25 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Share2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1">
+                <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Inviter un Frère</h3>
+                <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">INVITE</span>
+              </div>
+              <p className="text-[10px] text-emerald-100 line-clamp-1">Lien direct Gmail</p>
+            </div>
+          </button>
+        )}
 
         <button
           onClick={() => onSelectTab('portes')}
@@ -161,6 +183,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span className="px-1.5 py-0.2 text-[8px] font-black bg-amber-100 text-amber-900 rounded">12</span>
             </div>
             <p className="text-[10px] text-slate-500">Patriarches & Membres</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('departements')}
+          className="bg-white p-4 rounded-3xl border border-emerald-300 hover:border-[#C59A27] shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#0A3D36] flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Award className="w-5 h-5 text-[#C59A27]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#0A3D36]">Départements</h3>
+              <span className="px-1.5 py-0.2 text-[8px] font-black bg-emerald-100 text-emerald-900 rounded">PÔLES</span>
+            </div>
+            <p className="text-[10px] text-slate-500">Louange, Com, Prière...</p>
           </div>
         </button>
 

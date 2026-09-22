@@ -653,6 +653,7 @@ export const CultePresencesManager: React.FC<CultePresencesManagerProps> = ({
       </div>
 
       {/* 4. Dénotation par Tribu : Liste des 12 Tribus avec Présents et Absents */}
+      {activeSubTab === 'tribes' && (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-0.5">
@@ -901,6 +902,261 @@ export const CultePresencesManager: React.FC<CultePresencesManagerProps> = ({
           })}
         </div>
       </div>
+      )}
+
+      {/* Onglet : TOUS LES ABSENTS DU DIMANCHE */}
+      {activeSubTab === 'all_absents' && (
+        <div className="space-y-4">
+          <div className="bg-rose-50/60 border border-rose-200 rounded-3xl p-5 sm:p-6 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 text-rose-900 font-black text-base">
+                <UserX className="w-5 h-5 text-rose-600" />
+                <span>Tous les Membres Absents du Dimanche {selectedDate} ({allAbsentsList.length})</span>
+              </div>
+              <span className="text-xs bg-rose-200/80 text-rose-900 font-bold px-3 py-1 rounded-full">
+                À contacter & visiter en priorité
+              </span>
+            </div>
+            <p className="text-xs text-rose-800">
+              Ces membres inscrits ne se sont pas enregistrés aux cultes du dimanche sélectionné. Vous pouvez leur envoyer directement un message de bienveillance pastorale sur WhatsApp ou les pointer comme présents s'ils sont arrivés en retard.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allAbsentsList
+              .filter(m => {
+                const q = searchMemberQuery.toLowerCase().trim();
+                return !q || `${m.prenom} ${m.nom}`.toLowerCase().includes(q) || m.numero.includes(q) || (m.quartier && m.quartier.toLowerCase().includes(q));
+              })
+              .map(member => {
+                const tribe = tribes.find(t => t.id === member.tribeId);
+                return (
+                  <div
+                    key={member.id}
+                    className="bg-white rounded-2xl border border-rose-200/80 p-4 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      {member.photoUrl ? (
+                        <img
+                          src={member.photoUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-11 h-11 rounded-full object-cover border-2 border-rose-100 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-rose-100 text-rose-800 font-black text-sm flex items-center justify-center shrink-0">
+                          {member.prenom[0]}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-black text-slate-900 text-sm truncate">
+                          {member.prenom} {member.nom}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate flex items-center gap-1">
+                          <span>{member.numero}</span>
+                          {member.quartier && <span>• {member.quartier}</span>}
+                        </div>
+                        {tribe && (
+                          <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-black text-white" style={{ backgroundColor: tribe.bannerColor || '#0A3D36' }}>
+                            <span>{tribe.symbol}</span>
+                            <span>Tribu {tribe.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      <button
+                        onClick={() => handleRelanceAbsentWhatsApp(member, tribe)}
+                        className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Prendre des nouvelles (WhatsApp)</span>
+                      </button>
+                      <button
+                        onClick={() => handleQuickValidatePresence(member, tribe, selectedCulteFilter === 'CULTE_2_10H30' ? 'CULTE_2_10H30' : 'CULTE_1_07H30')}
+                        className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
+                        title="Pointer présent"
+                      >
+                        + Présent
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Onglet : MEMBRES QUI NE VIENNENT PLUS DEPUIS UN MOMENT */}
+      {activeSubTab === 'chronic_absents' && (
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-300 rounded-3xl p-5 sm:p-6 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 text-red-950 font-black text-base">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <span>Brebis qui ne viennent plus depuis un moment ({chronicAbsentsList.length})</span>
+              </div>
+              <span className="text-xs bg-red-200 text-red-900 font-black px-3 py-1 rounded-full">
+                Attention Pastorale Requise (2+ dimanches sans présence)
+              </span>
+            </div>
+            <p className="text-xs text-red-800">
+              « Quel homme d'entre vous, s'il a cent brebis, et qu'il en perde une, ne laisse les quatre-vingt-dix-neuf dans le désert pour aller après celle qui est perdue, jusqu'à ce qu'il la retrouve ? » (Luc 15:4).
+              Ces membres n'ont pas participé aux récents cultes. Contactez-les sans tarder ou planifiez une visite pastorale.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {chronicAbsentsList
+              .filter(p => {
+                const q = searchMemberQuery.toLowerCase().trim();
+                return !q || `${p.member.prenom} ${p.member.nom}`.toLowerCase().includes(q) || p.member.numero.includes(q) || (p.member.quartier && p.member.quartier.toLowerCase().includes(q));
+              })
+              .map(({ member, consecutiveAbsences, lastPresentDate }) => {
+                const tribe = tribes.find(t => t.id === member.tribeId);
+                const whatsappMsg = `Bonjour bien-aimé(e) ${member.prenom}, c'est l'équipe pastorale de la Cité Royale Siloé. Le Seigneur a mis ton nom sur notre cœur car nous avons remarqué ton absence aux cultes du dimanche. Nous voulions savoir comment tu vas et si tout va bien pour toi et ta famille. Que la grâce et la paix de Dieu reposent sur toi !`;
+                const whatsappUrl = `https://wa.me/${member.numero.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(whatsappMsg)}`;
+
+                return (
+                  <div
+                    key={member.id}
+                    className="bg-white rounded-3xl border-2 border-red-300 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      {member.photoUrl ? (
+                        <img
+                          src={member.photoUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-12 h-12 rounded-full object-cover border-2 border-red-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-800 font-black text-sm flex items-center justify-center shrink-0">
+                          {member.prenom[0]}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-black text-slate-900 text-sm truncate">
+                          {member.prenom} {member.nom}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {member.numero} {member.quartier ? `• ${member.quartier}` : ''}
+                        </div>
+                        {tribe && (
+                          <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-black text-white" style={{ backgroundColor: tribe.bannerColor || '#0A3D36' }}>
+                            <span>{tribe.symbol}</span>
+                            <span>Tribu {tribe.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-red-50/80 rounded-2xl p-3 border border-red-200 space-y-1">
+                      <div className="text-xs font-bold text-red-900 flex items-center justify-between">
+                        <span>Dimanches manqués consécutifs :</span>
+                        <span className="font-black text-red-700 bg-red-200 px-2 py-0.5 rounded-md">
+                          {consecutiveAbsences} dimanche(s)
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        Dernier culte assisté : <strong className="text-slate-800">{lastPresentDate || 'Aucun enregistré'}</strong>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Prendre des nouvelles (WhatsApp)</span>
+                      </a>
+                      <button
+                        onClick={() => handleQuickValidatePresence(member, tribe, selectedCulteFilter === 'CULTE_2_10H30' ? 'CULTE_2_10H30' : 'CULTE_1_07H30')}
+                        className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all"
+                        title="Pointer présent"
+                      >
+                        + Présent
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Onglet : TOUS LES PRÉSENTS */}
+      {activeSubTab === 'all_presents' && (
+        <div className="space-y-4">
+          <div className="bg-emerald-50/60 border border-emerald-200 rounded-3xl p-5 sm:p-6 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 text-emerald-950 font-black text-base">
+                <UserCheck className="w-5 h-5 text-emerald-600" />
+                <span>Tous les Membres Présents aux Cultes du {selectedDate} ({culteFilteredPresences.length})</span>
+              </div>
+              <span className="text-xs bg-emerald-200 text-emerald-900 font-black px-3 py-1 rounded-full">
+                Présences confirmées
+              </span>
+            </div>
+            <p className="text-xs text-emerald-800">
+              Liste complète des fidèles qui ont assisté aux cultes ce dimanche. Vous pouvez vérifier leurs horaires et canal d'enregistrement.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {culteFilteredPresences
+              .filter(p => {
+                const q = searchMemberQuery.toLowerCase().trim();
+                return !q || `${p.prenom} ${p.nom}`.toLowerCase().includes(q) || p.telephone.includes(q);
+              })
+              .map(presence => {
+                const tribe = tribes.find(t => t.id === presence.tribeId);
+                return (
+                  <div
+                    key={presence.id}
+                    className="bg-white rounded-2xl border border-emerald-200/80 p-4 shadow-xs flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center shrink-0">
+                        {presence.prenom[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-black text-slate-900 text-sm truncate">
+                          {presence.prenom} {presence.nom}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {presence.telephone}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            {presence.culte === 'CULTE_1_07H30' ? 'Culte 1 (07h30)' : 'Culte 2 (10h30)'}
+                          </span>
+                          {tribe && (
+                            <span className="text-[10px] text-slate-600 font-bold truncate">
+                              • Tribu {tribe.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onDeletePresence(presence.id)}
+                      className="text-slate-300 hover:text-rose-600 p-2 text-xs font-bold transition-all"
+                      title="Supprimer ce pointage"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* 5. MODAL D'AJOUT MANUEL D'UN FIDÈLE */}
       {showManualModal && (

@@ -1,4 +1,5 @@
 import { UserProfile, ProductItem, OpportunityItem, DepartmentItem, CommunityPost, ChurchEvent, AppNotification, MemberAd } from '../types';
+import { INITIAL_DEPARTMENTS_DATA } from './departmentsData';
 
 export const INITIAL_MEMBERS: UserProfile[] = [
   {
@@ -632,104 +633,7 @@ export const INITIAL_OPPORTUNITIES: OpportunityItem[] = [
   }
 ];
 
-export const INITIAL_DEPARTMENTS: DepartmentItem[] = [
-  {
-    id: 'jeunesse',
-    name: 'Jeunesse (Génération Impact)',
-    description: 'Rassemble les jeunes de 15 à 35 ans pour grandir dans la foi, développer leurs talents professionnels et impacter leur génération.',
-    leaderName: 'Pasteur David & Équipe Jeunesse',
-    leaderTitle: 'Responsables Jeunesse',
-    memberCount: 240,
-    iconName: 'Flame',
-    bannerColor: '#0A3D36',
-    activities: ['Cultes Jeunesse bimensuels', 'Masterclass Entrepreneuriat', 'Camps de retraite', 'Mentorat professionnel'],
-    announcements: ['Prochaine Masterclass Carrière : Samedi 21 Septembre à 16h', 'Inscriptions ouvertes pour le Camp Jeunesse 2026']
-  },
-  {
-    id: 'hommes',
-    name: 'Département des Hommes (Gédéons)',
-    description: 'Encourage les hommes à être des piliers spirituels, des pères responsables et des leaders d\'affaires intègres.',
-    leaderName: 'Ancien Thomas S.',
-    leaderTitle: 'Président des Gédéons',
-    memberCount: 180,
-    iconName: 'Shield',
-    bannerColor: '#0F4C44',
-    activities: ['Petits-déjeuners d\'affaires', 'Temps de prière d\'hommes', 'Entraide fraternelle et visites'],
-    announcements: ['Rencontre mensuelle des chefs de famille : Premier samedi du mois à 7h']
-  },
-  {
-    id: 'femmes',
-    name: 'Département des Femmes (Femmes Vertueuses)',
-    description: 'Une communauté de femmes de foi, d\'influence et de grâce qui s\'encouragent mutuellement dans la prière et l\'autonomie économique.',
-    leaderName: 'Pasteure Marie-Claire D.',
-    leaderTitle: 'Coordinatrice des Vertueuses',
-    memberCount: 290,
-    iconName: 'Heart',
-    bannerColor: '#C59A27',
-    activities: ['Conférence annuelle d\'impact', 'Ateliers couture & cuisine', 'Cellules de prière mamans'],
-    announcements: ['Séminaire "Femme Épanouie & Entrepreneure" en préparation']
-  },
-  {
-    id: 'chorale',
-    name: 'Chorale & Louange (Sons Célestes)',
-    description: 'Conduit le peuple de Dieu dans une adoration profonde et prophétique à chaque rassemblement.',
-    leaderName: 'Chantre Samuel K.',
-    leaderTitle: 'Directeur Musical',
-    memberCount: 65,
-    iconName: 'Music',
-    bannerColor: '#0A3D36',
-    activities: ['Répétitions vocales vendredis 18h', 'Formation solfège & chant', 'Concerts d\'adoration'],
-    announcements: ['Auditions ouvertes pour nouvelles voix ténors et sopranos']
-  },
-  {
-    id: 'media',
-    name: 'Média & Communication Digitale',
-    description: 'Gère la retransmission en direct, la photographie, le graphisme, les réseaux sociaux et la plateforme Vases Connect.',
-    leaderName: 'Frère Jean Koffi',
-    leaderTitle: 'Responsable Média',
-    memberCount: 42,
-    iconName: 'Camera',
-    bannerColor: '#A31D24',
-    activities: ['Streaming en direct HD', 'Production de capsules vidéo', 'Design des affiches d\'annonces'],
-    announcements: ['Formation au cadrage vidéo et montage ce samedi']
-  },
-  {
-    id: 'accueil',
-    name: 'Accueil & Protocole',
-    description: 'Offre un accueil chaleureux et royal à chaque visiteur et membre pour refléter l\'amour du Christ dès le parvis.',
-    leaderName: 'Sœur Grâce A.',
-    leaderTitle: 'Responsable Protocole',
-    memberCount: 75,
-    iconName: 'Users',
-    bannerColor: '#C59A27',
-    activities: ['Orientation des fidèles', 'Accueil des nouveaux arrivants', 'Service lors des réceptions'],
-    announcements: ['Répétition protocolaire pour la grande convention du mois']
-  },
-  {
-    id: 'technique',
-    name: 'Technique & Sonorisation',
-    description: 'Veille à la qualité acoustique, aux éclairages et au bon fonctionnement des équipements électro-acoustiques du sanctuaire.',
-    leaderName: 'Frère Emmanuel L.',
-    leaderTitle: 'Chef Équipe Technique',
-    memberCount: 28,
-    iconName: 'Wrench',
-    bannerColor: '#062722',
-    activities: ['Balance audio cultes', 'Maintenance du parc sonorisation', 'Gestion des lumières scéniques'],
-    announcements: ['Maintenance générale du système son ce vendredi']
-  },
-  {
-    id: 'evangelisation',
-    name: 'Évangélisation & Missions',
-    description: 'Accomplit la Grande Commission en partageant la bonne nouvelle dans la ville et en organisant des œuvres d\'entraide sociale.',
-    leaderName: 'Pasteur Paul B.',
-    leaderTitle: 'Directeur des Missions',
-    memberCount: 110,
-    iconName: 'Compass',
-    bannerColor: '#0A3D36',
-    activities: ['Sorties d\'évangélisation urbaine', 'Dons aux orphelinats', 'Suivi des nouveaux convertis'],
-    announcements: ['Grande croisade d\'évangélisation Porte des Cieux fin de mois']
-  }
-];
+export const INITIAL_DEPARTMENTS: DepartmentItem[] = INITIAL_DEPARTMENTS_DATA;
 
 export const INITIAL_POSTS: CommunityPost[] = [
   {

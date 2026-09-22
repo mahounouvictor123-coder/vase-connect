@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
-import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen } from 'lucide-react';
+import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen, Share2 } from 'lucide-react';
 import { UserProfile, Role, AppNotification } from '../types';
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onSelectTab: (tab: string) => void;
   onSwitchUser?: (memberId: string) => void;
+  onOpenInvite?: () => void;
   allMembers?: UserProfile[];
 }
 
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onSelectTab,
   onSwitchUser = (_memberId: string) => {},
+  onOpenInvite,
   allMembers = [],
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -60,7 +62,9 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="hidden lg:flex items-center gap-1 mx-2">
           {[
             { id: 'accueil', label: 'Accueil' },
-            { id: 'pastor', label: 'Espace Pasteur 📖' },
+            ...(currentUser?.role === 'PASTEUR'
+              ? [{ id: 'pastor', label: 'Espace Pasteur 📖' }]
+              : []),
             { id: 'presence_culte', label: 'Pointage Culte 🙏' },
             { id: 'familles_honneur', label: "Familles d'Honneur 📍" },
             { id: 'portes', label: '12 Portes d\'Influence' },
@@ -103,6 +107,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions & Profile */}
         <div className="flex items-center gap-2">
+          {/* Bouton Inviter un Membre */}
+          {onOpenInvite && (
+            <button
+              onClick={onOpenInvite}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#0A3D36] border border-[#C59A27]/40 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95"
+              title="Inviter un frère ou une sœur sur Vases Connect"
+            >
+              <Share2 className="w-3.5 h-3.5 text-[#C59A27]" />
+              <span className="hidden sm:inline">Inviter</span>
+            </button>
+          )}
+
           {/* AI Sparkle Button for Mobile */}
           <button
             onClick={onOpenAssistant}
@@ -222,19 +238,33 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
 
                   <div className="pt-2 flex flex-col gap-1">
-                    <button
-                      onClick={() => {
-                        onSelectTab('pastor');
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full text-left text-xs py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-[#0A3D36] font-bold flex items-center justify-between border border-[#C59A27]/30"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5 text-[#C59A27]" />
-                        <span>Espace Pasteur & Rapports</span>
-                      </div>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#C59A27] text-slate-950 font-black">CHAIRE</span>
-                    </button>
+                    {currentUser.role === 'PASTEUR' && (
+                      <button
+                        onClick={() => {
+                          onSelectTab('pastor');
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full text-left text-xs py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-[#0A3D36] font-bold flex items-center justify-between border border-[#C59A27]/30"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5 text-[#C59A27]" />
+                          <span>Espace Pasteur & Rapports</span>
+                        </div>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#C59A27] text-slate-950 font-black">CHAIRE</span>
+                      </button>
+                    )}
+                    {onOpenInvite && (
+                      <button
+                        onClick={() => {
+                          onOpenInvite();
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full text-left text-xs py-1.5 px-2 rounded-lg hover:bg-amber-50 text-[#0A3D36] font-bold flex items-center gap-1.5"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-[#C59A27]" />
+                        <span>Inviter un membre (Lien invité)</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         onSelectTab('profil');

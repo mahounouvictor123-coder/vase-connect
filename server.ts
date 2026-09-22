@@ -7,7 +7,7 @@ import { INFLUENCE_GATES, INITIAL_GATE_MEMBERS } from './src/data/influenceGates
 import { INITIAL_TRIBES, INITIAL_TRIBE_MEMBERS } from './src/data/tribesData';
 import { INITIAL_FAMILLES_HONNEUR, INITIAL_FAMILLE_INSCRIPTIONS } from './src/data/famillesHonneurData';
 import { INITIAL_CULTES_RESUMES, INITIAL_RAPPORT_TEMPLATES, INITIAL_RAPPORTS_SOUMIS, INITIAL_RAPPORTS_SPECIAUX, INITIAL_CULTE_PRESENCES } from './src/data/pastorData';
-import { UserProfile, ProductItem, OpportunityItem, AISearchResult, GateMemberProfile, TribeMember, TribeInfo, FamilleHonneur, FamilleHonneurInscription, CulteResume, RapportTemplate, RapportSoumis, RapportSpecial, CultePresenceRecord } from './src/types';
+import { UserProfile, ProductItem, OpportunityItem, AISearchResult, GateMemberProfile, TribeMember, TribeInfo, FamilleHonneur, FamilleHonneurInscription, CulteResume, RapportTemplate, RapportSoumis, RapportSpecial, CultePresenceRecord, DepartmentItem, DepartmentMember } from './src/types';
 
 dotenv.config();
 
@@ -21,7 +21,7 @@ let members: UserProfile[] = [...INITIAL_MEMBERS];
 let products: ProductItem[] = [...INITIAL_PRODUCTS];
 let opportunities: OpportunityItem[] = [...INITIAL_OPPORTUNITIES];
 let posts = [...INITIAL_POSTS];
-const departments = [...INITIAL_DEPARTMENTS];
+let departments: DepartmentItem[] = [...INITIAL_DEPARTMENTS];
 const events = [...INITIAL_EVENTS];
 let gateMembers: GateMemberProfile[] = [...INITIAL_GATE_MEMBERS];
 let tribes: TribeInfo[] = [...INITIAL_TRIBES];
@@ -149,6 +149,47 @@ app.post('/api/tribes/members', (req, res) => {
   }
 
   res.json({ success: true, member });
+});
+
+// Departments endpoints
+app.get('/api/departments', (req, res) => {
+  res.json({ departments });
+});
+
+app.post('/api/departments', (req, res) => {
+  const newDept: DepartmentItem = req.body;
+  if (!newDept.id) {
+    newDept.id = 'dept-' + Date.now();
+  }
+  if (!newDept.membersList) {
+    newDept.membersList = [];
+  }
+  departments.unshift(newDept);
+  res.json({ success: true, department: newDept });
+});
+
+app.post('/api/departments/:id/members', (req, res) => {
+  const { id } = req.params;
+  const member: DepartmentMember = req.body;
+  const dept = departments.find(d => d.id === id);
+  if (!dept) {
+    return res.status(404).json({ error: 'Département introuvable' });
+  }
+  if (!member.id) {
+    member.id = 'dm-' + Date.now();
+  }
+  member.departmentId = id;
+  if (!dept.membersList) {
+    dept.membersList = [];
+  }
+  const existingIdx = dept.membersList.findIndex(m => m.id === member.id || (member.email && m.email === member.email));
+  if (existingIdx !== -1) {
+    dept.membersList[existingIdx] = member;
+  } else {
+    dept.membersList.push(member);
+    dept.memberCount = (dept.memberCount || 0) + 1;
+  }
+  res.json({ success: true, member, department: dept });
 });
 
 // Familles d'Honneur endpoints

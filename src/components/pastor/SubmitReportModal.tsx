@@ -33,7 +33,7 @@ export const SubmitReportModal: React.FC<SubmitReportModalProps> = ({
     template.categorie === 'TRIBU'
       ? 'Patriarche de Tribu'
       : template.categorie === 'FAMILLE_HONNEUR'
-      ? 'Berger de Cellule'
+      ? 'Berger'
       : template.categorie === 'DEPARTEMENT'
       ? 'Responsable de Département'
       : 'Membre Déclarant'

@@ -280,7 +280,7 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/50 text-[#F5DE98] text-xs font-black uppercase tracking-wider">
               <Users className="w-3.5 h-3.5" />
-              <span>Cellules de Proximité • Fenêtres Berger, Hôte & Maison</span>
+              <span>Familles d'Honneur • Fenêtres Berger, Hôte & Maison</span>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-black text-white leading-tight">
@@ -854,7 +854,7 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
                             </div>
                             <div className="space-y-0.5">
                               <span className="text-[9px] font-black uppercase text-[#C59A27] tracking-wider block">
-                                Berger de la Cellule
+                                Berger
                               </span>
                               <h4 className="text-xs font-black text-slate-900 leading-tight">
                                 {famille.bergerPrenom} {famille.bergerNom}
@@ -875,7 +875,7 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
                               <Phone className="w-3.5 h-3.5" />
                             </a>
                             <a
-                              href={`https://wa.me/${famille.bergerWhatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Bonjour Berger ${famille.bergerNom}, je vous contacte à propos de la cellule ${famille.nom} à ${famille.quartier}.`)}`}
+                              href={`https://wa.me/${famille.bergerWhatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Bonjour Berger ${famille.bergerNom}, je vous contacte à propos de la Famille d'Honneur ${famille.nom} à ${famille.quartier}.`)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"

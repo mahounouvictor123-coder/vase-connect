@@ -4,6 +4,7 @@ import {
   RapportSoumis,
   RapportSpecial,
   CultePresenceRecord,
+  UserProfile,
 } from '../types';
 
 export const INITIAL_CULTES_RESUMES: CulteResume[] = [
@@ -288,7 +289,7 @@ export const INITIAL_RAPPORTS_SOUMIS: RapportSoumis[] = [
     entiteConcernee: 'Famille Grâce & Vie (Fidjrossè Plage)',
     auteurId: 'berger-akogbato',
     auteurNom: 'Pasteur Élisée Agossa',
-    auteurRole: 'Berger de Cellule',
+    auteurRole: 'Berger',
     auteurTelephone: '+229 97 22 11 00',
     auteurPhotoUrl:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
@@ -382,7 +383,7 @@ export const INITIAL_RAPPORTS_SOUMIS: RapportSoumis[] = [
     entiteConcernee: 'Famille Shékina (Akpakpa Dodomè)',
     auteurId: 'berger-akpakpa',
     auteurNom: 'Frère David Mensah',
-    auteurRole: 'Berger de Cellule',
+    auteurRole: 'Berger',
     auteurTelephone: '+229 96 11 22 33',
     auteurPhotoUrl:
       'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80',
@@ -775,3 +776,32 @@ export const INITIAL_CULTE_PRESENCES: CultePresenceRecord[] = [
     source: 'LIEN_MEMBRE',
   },
 ];
+
+export const PASTORAL_ACCESS_PASSCODE = '7777'; // Code pastoral secret
+
+export const PASTOR_USER_PROFILE: UserProfile = {
+  id: 'usr-pasteur-principal',
+  phone: '+225 07 00 00 00 00',
+  email: 'pasteur@vasesdhonneur.ci',
+  phonePublic: false,
+  addressPublic: false,
+  proInfoPublic: true,
+  firstName: 'Pasteur',
+  lastName: 'Principal',
+  photoUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80',
+  profession: 'Pasteur Principal • Chaire Pastorale',
+  bio: 'Conducteur spirituel et Berger Principal de l\'Église Vases d\'Honneur.',
+  city: 'Abidjan',
+  country: 'Côte d\'Ivoire',
+  skills: ['Leadership Spirituel', 'Prédication', 'Vision Prophétique', 'Direction'],
+  activities: ['Cultes Dominicaux', 'Conseil Pastoral', 'Gouvernance de l\'Église'],
+  departmentId: 'pastoral',
+  departmentName: 'Chaire Pastorale',
+  availableForOpportunities: false,
+  availableForMissions: true,
+  status: 'DISPONIBLE',
+  role: 'PASTEUR',
+  completionScore: 100,
+  createdAt: '2024-01-01T00:00:00Z',
+};
+

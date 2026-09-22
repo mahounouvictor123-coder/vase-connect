@@ -110,7 +110,7 @@ export const ProposeFamilleModal: React.FC<ProposeFamilleModalProps> = ({
       // Berger
       bergerNom: bergerNom.trim() || 'Référent Pastoral',
       bergerPrenom: bergerPrenom.trim(),
-      bergerRole: 'Berger de Cellule',
+      bergerRole: 'Berger',
       bergerPhone: bergerPhone.trim() || hotePhone.trim(),
       bergerWhatsapp: bergerWhatsapp.trim() || bergerPhone.trim() || hotePhone.trim(),
       bergerPhotoUrl:
@@ -293,7 +293,7 @@ export const ProposeFamilleModal: React.FC<ProposeFamilleModalProps> = ({
             <div className="space-y-3 pt-3 border-t border-slate-200">
               <h4 className="text-xs font-black uppercase text-[#0A3D36] tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-[#C59A27]" />
-                <span>2. Fenêtre Berger (Leader Spirituel de Cellule)</span>
+                <span>2. Fenêtre Berger (Conducteur Spirituel)</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

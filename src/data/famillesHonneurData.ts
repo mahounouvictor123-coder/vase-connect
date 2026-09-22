@@ -74,7 +74,7 @@ export const INITIAL_FAMILLES_HONNEUR: FamilleHonneur[] = [
     longitude: 2.4089,
     bergerNom: 'Kouassi',
     bergerPrenom: 'Évangéliste Samuel',
-    bergerRole: 'Berger de Cellule',
+    bergerRole: 'Berger',
     bergerPhone: '+229 96 33 55 77',
     bergerWhatsapp: '+229 96 33 55 77',
     bergerPhotoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
