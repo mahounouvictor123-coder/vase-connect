@@ -24,9 +24,13 @@ import {
   Sun,
   Crown as CrownIcon
 } from 'lucide-react';
-import { CultePresenceRecord, CulteServiceType, TribeId, TribeInfo, TribeMember, TribeRole, UserProfile } from '../types';
+import { CultePresenceRecord, CulteServiceType, RapportSoumis, RapportTemplate, TribeId, TribeInfo, TribeMember, TribeRole, UserProfile } from '../types';
 import { INITIAL_TRIBES } from '../data/tribesData';
 import { TribeRegistrationModal } from './TribeRegistrationModal';
+import { LeadershipGuardModal } from './LeadershipGuardModal';
+import { CreateSendReportModal } from './CreateSendReportModal';
+import { LeadershipAccount } from '../data/leadershipData';
+import { Lock, FileText, Send } from 'lucide-react';
 import {
   computeMemberAssiduity,
   doesPresenceMatchMember,
@@ -39,7 +43,9 @@ interface TribesViewProps {
   tribes?: TribeInfo[];
   tribeMembers: TribeMember[];
   presences?: CultePresenceRecord[];
+  rapportTemplates?: RapportTemplate[];
   onAddPresence?: (presence: CultePresenceRecord) => Promise<void> | void;
+  onSubmitReport?: (rapport: RapportSoumis) => void;
   initialTribeId?: TribeId;
   onSaveMember?: (member: TribeMember, isLeader: boolean) => void;
   onSaveTribeMember?: (member: TribeMember, isLeader: boolean) => void;
@@ -52,7 +58,9 @@ export const TribesView: React.FC<TribesViewProps> = ({
   tribes = INITIAL_TRIBES,
   tribeMembers,
   presences = [],
+  rapportTemplates = [],
   onAddPresence,
+  onSubmitReport,
   initialTribeId,
   onSaveMember,
   onSaveTribeMember,
@@ -65,6 +73,11 @@ export const TribesView: React.FC<TribesViewProps> = ({
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [modalLeaderMode, setModalLeaderMode] = useState(false);
   const [editingMember, setEditingMember] = useState<TribeMember | null>(null);
+
+  // Security & Leadership states
+  const [isLeaderGuardOpen, setIsLeaderGuardOpen] = useState(false);
+  const [isCreateReportOpen, setIsCreateReportOpen] = useState(false);
+  const [activeLeaderAccount, setActiveLeaderAccount] = useState<LeadershipAccount | null>(null);
 
   // Selected Tribe object
   const activeTribe = useMemo(() => {
@@ -491,14 +504,26 @@ export const TribesView: React.FC<TribesViewProps> = ({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleOpenRegister(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#C59A27] text-[#0A3D36] hover:bg-amber-100 text-xs font-bold transition-all shadow-xs"
-              >
-                <CrownIcon className="w-3.5 h-3.5 text-[#C59A27]" />
-                <span>{activeLeader ? 'Modifier le Chef' : 'Désigner le Chef'}</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLeaderGuardOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C59A27] hover:bg-[#E5B22F] text-slate-950 text-xs font-black shadow-sm transition-all hover:scale-102 active:scale-95"
+                  title="Accès sécurisé pour le Chef de Tribu (mot de passe requis)"
+                >
+                  <Lock className="w-3.5 h-3.5 text-slate-950" />
+                  <span>Espace Chef & Rapport 🔒</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenRegister(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#C59A27] text-[#0A3D36] hover:bg-amber-100 text-xs font-bold transition-all shadow-xs"
+                >
+                  <CrownIcon className="w-3.5 h-3.5 text-[#C59A27]" />
+                  <span>{activeLeader ? 'Modifier le Chef' : 'Désigner le Chef'}</span>
+                </button>
+              </div>
             </div>
 
             {activeLeader ? (
@@ -966,6 +991,42 @@ export const TribesView: React.FC<TribesViewProps> = ({
           isLeaderMode={modalLeaderMode}
           onSaveMember={(member, isLeader) => {
             handleSaveFinal(member, isLeader);
+          }}
+        />
+      )}
+
+      {/* Leadership Access Guard for Tribe Leader */}
+      {isLeaderGuardOpen && activeTribe && (
+        <LeadershipGuardModal
+          category="CHEF_TRIBU"
+          title={`Espace Sécurisé • Chef de la Tribu ${activeTribe.name}`}
+          targetName={`Tribu ${activeTribe.name}`}
+          currentUser={currentUser}
+          onClose={() => setIsLeaderGuardOpen(false)}
+          onUnlocked={(account) => {
+            setActiveLeaderAccount(account);
+            setIsLeaderGuardOpen(false);
+            setIsCreateReportOpen(true);
+          }}
+          onOpenCreateReport={() => {
+            setIsLeaderGuardOpen(false);
+            setIsCreateReportOpen(true);
+          }}
+        />
+      )}
+
+      {/* Create & Send Report Modal directly to Pastor */}
+      {isCreateReportOpen && activeTribe && (
+        <CreateSendReportModal
+          category="CHEF_TRIBU"
+          defaultEntityName={`Tribu ${activeTribe.name}`}
+          defaultLeaderName={activeLeaderAccount?.holderName || (activeLeader ? `${activeLeader.prenom} ${activeLeader.nom}` : '')}
+          defaultLeaderPhone={activeLeaderAccount?.phone || activeLeader?.phone || ''}
+          templates={rapportTemplates}
+          currentUser={currentUser}
+          onClose={() => setIsCreateReportOpen(false)}
+          onSubmitReport={(report) => {
+            if (onSubmitReport) onSubmitReport(report);
           }}
         />
       )}

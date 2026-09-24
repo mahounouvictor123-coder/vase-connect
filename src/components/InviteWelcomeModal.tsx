@@ -1,86 +1,192 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   CheckCircle2,
   Mail,
   User,
   Crown,
-  Heart,
+  Briefcase,
+  MapPin,
+  Home,
+  Church,
   ArrowRight,
   ShieldCheck,
-  X
+  Phone,
+  X,
 } from 'lucide-react';
-import { UserProfile, TribeId, Role } from '../types';
+import {
+  UserProfile,
+  TribeId,
+  InfluenceGateId,
+  FamilleHonneur,
+  DepartmentItem,
+  TribeInfo,
+} from '../types';
 import { INITIAL_TRIBES } from '../data/tribesData';
+import { INITIAL_DEPARTMENTS_DATA } from '../data/departmentsData';
+import { INITIAL_FAMILLES_HONNEUR } from '../data/famillesHonneurData';
+import { INFLUENCE_GATES } from '../data/influenceGatesData';
+import {
+  detectInfluenceGate,
+  matchFamilleHonneur,
+  GRAND_COTONOU_QUARTIERS,
+  SUGGESTED_PROFESSIONS,
+} from '../utils/memberAffiliationUtils';
+import { RegisterAffiliationData } from './AuthModal';
 
 interface InviteWelcomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginSuccess: (user: UserProfile) => void;
+  onRegisterMember?: (
+    user: UserProfile,
+    affiliation: RegisterAffiliationData
+  ) => void;
   defaultEmail?: string;
+  tribes?: TribeInfo[];
+  departments?: DepartmentItem[];
+  famillesHonneur?: FamilleHonneur[];
 }
 
 export const InviteWelcomeModal: React.FC<InviteWelcomeModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
+  onRegisterMember,
   defaultEmail = 'siloestore44@gmail.com',
+  tribes = INITIAL_TRIBES,
+  departments = INITIAL_DEPARTMENTS_DATA,
+  famillesHonneur = INITIAL_FAMILLES_HONNEUR,
 }) => {
   const [email, setEmail] = useState(defaultEmail);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('+229 97 00 11 22');
+  const [profession, setProfession] = useState('Développeur Web & Mobile');
   const [selectedTribe, setSelectedTribe] = useState<TribeId>('juda');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('communication');
+  const [quartier, setQuartier] = useState('Fidjrossè Plage / Akogbato');
+  const [customQuartier, setCustomQuartier] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [showManualForm, setShowManualForm] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // 1. Détection de la porte en temps réel
+  const detectedGateResult = useMemo(() => {
+    return detectInfluenceGate(profession);
+  }, [profession]);
+
+  const effectiveGate = useMemo(() => {
+    return INFLUENCE_GATES.find(g => g.id === detectedGateResult.gateId) || INFLUENCE_GATES[0];
+  }, [detectedGateResult.gateId]);
+
+  // 2. Détection de la Famille d'Honneur en temps réel
+  const effectiveQuartier = quartier === 'AUTRE' ? customQuartier : quartier;
+  const matchedFamille = useMemo(() => {
+    return matchFamilleHonneur(effectiveQuartier, famillesHonneur);
+  }, [effectiveQuartier, famillesHonneur]);
 
   if (!isOpen) return null;
 
-  const handleGoogleSignIn = (customEmail?: string, customFirst?: string, customLast?: string) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName.trim() || !lastName.trim()) {
+      setErrorMessage('Veuillez renseigner votre nom et prénom.');
+      return;
+    }
+    if (!phone.trim()) {
+      setErrorMessage('Veuillez renseigner votre numéro de téléphone.');
+      return;
+    }
+
+    setErrorMessage('');
     setIsSigningIn(true);
-    const finalEmail = customEmail || email || 'membre.vases@gmail.com';
-    const computedFirstName = customFirst || firstName.trim() || finalEmail.split('@')[0].split('.')[0] || 'Fidèle';
-    const computedLastName = customLast || lastName.trim() || 'Vases';
 
     setTimeout(() => {
+      const generatedId = 'usr-inv-' + Date.now();
+      const finalEmail = email || `${firstName.toLowerCase().trim()}.${lastName.toLowerCase().trim()}@gmail.com`;
+      const finalQuartier = effectiveQuartier.trim() || 'Cotonou';
+      const chosenDept = departments.find(d => d.id === selectedDepartment) || departments[0];
+
       const newUser: UserProfile = {
-        id: 'usr-gmail-' + Date.now(),
+        id: generatedId,
         email: finalEmail,
-        phone: '+225 01 00 00 00 00',
-        phonePublic: false,
+        phone: phone.trim(),
+        phonePublic: true,
         addressPublic: false,
         proInfoPublic: true,
-        firstName: computedFirstName.charAt(0).toUpperCase() + computedFirstName.slice(1),
-        lastName: computedLastName.toUpperCase(),
-        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-        profession: 'Membre Vases d\'Honneur',
-        bio: 'Bienvenue dans la communauté Vases d\'Honneur. Connecté via Google / Gmail.',
-        city: 'Abidjan',
-        country: 'Côte d\'Ivoire',
-        skills: ['Engagement Chrétien', 'Entraide'],
-        activities: ['Membre de Tribu', 'Culte Dominical'],
-        departmentId: 'jeunesse',
-        departmentName: 'Communauté des Vases',
+        firstName: firstName.trim().charAt(0).toUpperCase() + firstName.trim().slice(1),
+        lastName: lastName.trim().toUpperCase(),
+        photoUrl:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+        profession: profession.trim(),
+        bio: `Membre invité sur Vases Connect. Profession : ${profession.trim()} • Quartier : ${finalQuartier}.`,
+        city: 'Cotonou',
+        country: 'Bénin',
+        skills: [profession.trim(), 'Engagement Fraternel'],
+        activities: [chosenDept.name, `Tribu ${selectedTribe}`],
+        departmentId: selectedDepartment,
+        departmentName: chosenDept.name,
         availableForOpportunities: true,
         availableForMissions: true,
         status: 'DISPONIBLE',
-        role: 'MEMBRE', // STRICTEMENT MEMBRE : Aucun accès à l'Espace Pasteur
+        role: 'MEMBRE',
         tribeId: selectedTribe,
-        completionScore: 90,
+        tribeRole: 'MEMBRE',
+        influenceGates: [effectiveGate.id],
+        gateProfiles: {
+          [effectiveGate.id]: {
+            id: 'gp-' + generatedId,
+            userId: generatedId,
+            gateId: effectiveGate.id,
+            memberName: `${firstName.trim()} ${lastName.trim().toUpperCase()}`,
+            memberProfession: profession.trim(),
+            memberPhoto:
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+            memberPhone: phone.trim(),
+            memberCity: 'Cotonou',
+            memberCountry: 'Bénin',
+            roleInGate: 'Professionnel / Cadre',
+            subSector: effectiveGate.keySubSectors[0] || profession.trim(),
+            visionImpact: `Membre inscrit via invitation dans la Porte ${effectiveGate.name}.`,
+            skills: [profession.trim()],
+            seekingCollaboration: true,
+            openForMentoring: true,
+            whatsappContact: phone.trim(),
+            emailContact: finalEmail,
+            registeredAt: new Date().toISOString().split('T')[0],
+          },
+        },
+        quartier: finalQuartier,
+        familleHonneurId: matchedFamille?.id,
+        completionScore: 92,
         createdAt: new Date().toISOString(),
       };
 
+      const affiliation: RegisterAffiliationData = {
+        tribeId: selectedTribe,
+        departmentId: selectedDepartment,
+        detectedGateId: effectiveGate.id,
+        familleHonneurId: matchedFamille?.id,
+      };
+
+      if (onRegisterMember) {
+        onRegisterMember(newUser, affiliation);
+      } else {
+        onLoginSuccess(newUser);
+      }
+
       setIsSigningIn(false);
-      onLoginSuccess(newUser);
       onClose();
-    }, 500);
+    }, 450);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden text-slate-800 animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden text-slate-800 animate-in zoom-in-95 my-auto max-h-[95vh] flex flex-col">
         {/* Bannière d'Accueil de l'Invité */}
-        <div className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] p-6 sm:p-8 text-white relative text-center">
+        <div className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] p-5 sm:p-6 text-white relative text-center shrink-0">
           <button
+            type="button"
             onClick={onClose}
             className="absolute top-4 right-4 p-1.5 rounded-full text-white/70 hover:text-white bg-white/10 hover:bg-white/20 transition-colors"
             aria-label="Fermer"
@@ -88,162 +194,217 @@ export const InviteWelcomeModal: React.FC<InviteWelcomeModalProps> = ({
             <X className="w-4 h-4" />
           </button>
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-[#C59A27]/20 border border-[#C59A27]/50 flex items-center justify-center text-[#E5B22F] shadow-lg mb-3">
-            <Sparkles className="w-7 h-7 text-[#E5B22F]" />
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#C59A27]/20 border border-[#C59A27]/50 flex items-center justify-center text-[#E5B22F] shadow-lg mb-2">
+            <Sparkles className="w-6 h-6 text-[#E5B22F]" />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/40 text-[#E5B22F] text-[11px] font-black uppercase tracking-wider mb-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/40 text-[#E5B22F] text-[11px] font-black uppercase tracking-wider mb-1">
             <span>🕊️ Vous êtes Invité(e)</span>
           </div>
 
-          <h3 className="text-xl sm:text-2xl font-black text-white">
-            Bienvenue sur Vases Connect
+          <h3 className="text-lg sm:text-xl font-black text-white">
+            Bienvenue sur Porte des Cieux
           </h3>
-
-          <p className="text-xs text-emerald-100/90 mt-1 max-w-md mx-auto">
-            La plateforme fraternelle de la communauté Vases d'Honneur. Connectez-vous avec votre compte <strong>Gmail</strong> pour rejoindre votre tribu et pointer vos présences.
+          <p className="text-xs text-emerald-100/90 mt-0.5 max-w-md mx-auto">
+            Remplissez votre fiche pour être affecté(e) automatiquement à votre <strong>Porte d'Influence</strong>, votre <strong>Tribu</strong>, votre <strong>Département</strong> et votre <strong>Famille d'Honneur</strong>.
           </p>
         </div>
 
-        {/* Corps d'Authentification Gmail */}
-        <div className="p-6 sm:p-7 space-y-5">
-          {/* Note de Bienvenue & Sécurité */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-xs text-slate-600 flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-slate-800">Espace Membre Protégé</p>
-              <p className="text-[11px] text-slate-500">
-                Votre connexion avec Gmail active votre compte membre personnel. L'espace de la chaire pastorale reste strictement réservé à la direction de l'église.
-              </p>
-            </div>
-          </div>
-
-          {/* Bouton Majeur Google Officiel */}
-          <button
-            type="button"
-            disabled={isSigningIn}
-            onClick={() => handleGoogleSignIn(email)}
-            className="w-full py-3.5 px-5 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 rounded-2xl shadow-sm text-slate-800 font-bold text-sm flex items-center justify-center gap-3 transition-all hover:scale-101 active:scale-98 disabled:opacity-50"
-          >
-            {/* SVG Officiel Google */}
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-              />
-            </svg>
-            <span>
-              {isSigningIn ? 'Connexion avec Google en cours...' : `Continuer avec Google (${email})`}
-            </span>
-          </button>
-
-          {/* Déclencheur pour personnaliser son compte */}
-          {!showManualForm ? (
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setShowManualForm(true)}
-                className="text-xs text-[#0A3D36] hover:underline font-bold"
-              >
-                ✏️ Utiliser une autre adresse Gmail ou préciser mon Nom
-              </button>
-            </div>
-          ) : (
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3 animate-in fade-in">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Adresse Gmail
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="votre.email@gmail.com"
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-white rounded-xl border border-slate-200 focus:outline-hidden focus:border-[#0A3D36]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Ex: David"
-                    className="w-full px-3 py-2 text-xs bg-white rounded-xl border border-slate-200 focus:outline-hidden focus:border-[#0A3D36]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Ex: Kouamé"
-                    className="w-full px-3 py-2 text-xs bg-white rounded-xl border border-slate-200 focus:outline-hidden focus:border-[#0A3D36]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Votre Tribu d'appartenance
-                </label>
-                <select
-                  value={selectedTribe}
-                  onChange={(e) => setSelectedTribe(e.target.value as TribeId)}
-                  className="w-full px-3 py-2 text-xs bg-white rounded-xl border border-slate-200 focus:outline-hidden focus:border-[#0A3D36]"
-                >
-                  {INITIAL_TRIBES.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Tribu {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleGoogleSignIn(email, firstName, lastName)}
-                className="w-full py-2.5 bg-[#0A3D36] hover:bg-[#072a25] text-white rounded-xl text-xs font-bold transition-colors"
-              >
-                Valider et me connecter
-              </button>
+        {/* Corps d'Authentification */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3.5 text-xs">
+          {errorMessage && (
+            <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+              {errorMessage}
             </div>
           )}
 
-          {/* Option invité observateur */}
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-400">Première visite ?</span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-slate-600 hover:text-slate-900 font-semibold"
-            >
-              Découvrir en mode invité
-            </button>
+          {/* Prénom & Nom */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Prénom <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <User className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Ex: David"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-hidden focus:border-[#0A3D36]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Nom <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Ex: Koffi"
+                className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-hidden focus:border-[#0A3D36]"
+              />
+            </div>
           </div>
-        </div>
+
+          {/* Téléphone & Email */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Téléphone WhatsApp <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Phone className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#0A3D36]" />
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+229 97 00 11 22"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-hidden focus:border-[#0A3D36]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">
+                Email Gmail (Optionnel)
+              </label>
+              <div className="relative">
+                <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="votre.email@gmail.com"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-hidden focus:border-[#0A3D36]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Profession & Détection de Porte d'Influence */}
+          <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
+            <label className="font-bold text-slate-800 flex items-center gap-1.5">
+              <Briefcase className="w-3.5 h-3.5 text-[#C59A27]" />
+              <span>Profession ou domaine d'activité <span className="text-rose-500">*</span></span>
+            </label>
+            <input
+              type="text"
+              required
+              list="invite-professions"
+              value={profession}
+              onChange={(e) => setProfession(e.target.value)}
+              placeholder="Ex: Développeur Web, Médecin, Comptable, Juriste..."
+              className="w-full px-3 py-2 bg-white rounded-xl border border-amber-300 text-xs font-semibold text-slate-900 focus:outline-hidden"
+            />
+            <datalist id="invite-professions">
+              {SUGGESTED_PROFESSIONS.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+
+            <div className="p-2 rounded-xl bg-white border border-amber-200 flex items-center justify-between text-[11px]">
+              <span className="text-emerald-700 font-black">
+                ✨ Porte Détectée : Porte {effectiveGate.number} — {effectiveGate.name}
+              </span>
+            </div>
+          </div>
+
+          {/* Tribu & Département */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="space-y-1">
+              <label className="font-bold text-slate-700 flex items-center gap-1">
+                <Crown className="w-3.5 h-3.5 text-[#C59A27]" />
+                <span>Tribu <span className="text-rose-500">*</span></span>
+              </label>
+              <select
+                value={selectedTribe}
+                onChange={(e) => setSelectedTribe(e.target.value as TribeId)}
+                className="w-full px-2.5 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800"
+              >
+                {tribes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Tribu {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-bold text-slate-700 flex items-center gap-1">
+                <Church className="w-3.5 h-3.5 text-[#0A3D36]" />
+                <span>Département <span className="text-rose-500">*</span></span>
+              </label>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="w-full px-2.5 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800"
+              >
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Quartier & Rattachement Famille d'Honneur */}
+          <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+            <label className="font-bold text-slate-800 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Quartier de résidence <span className="text-rose-500">*</span></span>
+            </label>
+            <select
+              value={quartier}
+              onChange={(e) => setQuartier(e.target.value)}
+              className="w-full px-3 py-2 bg-white rounded-xl border border-emerald-300 text-xs font-semibold text-slate-900"
+            >
+              {GRAND_COTONOU_QUARTIERS.map((q) => (
+                <option key={q.quartier} value={q.quartier}>
+                  {q.quartier} → {q.familleNom}
+                </option>
+              ))}
+              <option value="AUTRE">Autre quartier...</option>
+            </select>
+
+            {quartier === 'AUTRE' && (
+              <input
+                type="text"
+                required
+                value={customQuartier}
+                onChange={(e) => setCustomQuartier(e.target.value)}
+                placeholder="Votre quartier (Ex: Houéyiho, Patte d'Oie...)"
+                className="w-full px-3 py-2 bg-white rounded-xl border border-emerald-300 text-xs font-semibold text-slate-900"
+              />
+            )}
+
+            {matchedFamille && (
+              <div className="p-2 rounded-xl bg-white border border-emerald-200 text-[11px] flex items-center gap-2">
+                <Home className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span className="text-slate-700">
+                  Famille d'Honneur : <strong>{matchedFamille.nom}</strong> ({matchedFamille.quartier})
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Bouton de validation */}
+          <button
+            type="submit"
+            disabled={isSigningIn}
+            className="w-full py-3 bg-[#0A3D36] hover:bg-[#072a25] text-white font-bold rounded-2xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all hover:scale-101 active:scale-98 cursor-pointer"
+          >
+            <span>{isSigningIn ? 'Enregistrement en cours...' : 'Valider mon Inscription & Mes Affectations'}</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#C59A27]" />
+          </button>
+        </form>
       </div>
     </div>
   );

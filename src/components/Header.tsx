@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
-import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen, Share2 } from 'lucide-react';
+import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen, Share2, Heart } from 'lucide-react';
 import { UserProfile, Role, AppNotification } from '../types';
 
 interface HeaderProps {
@@ -62,18 +62,20 @@ export const Header: React.FC<HeaderProps> = ({
         <nav className="hidden lg:flex items-center gap-1 mx-2">
           {[
             { id: 'accueil', label: 'Accueil' },
-            ...(currentUser?.role === 'PASTEUR'
-              ? [{ id: 'pastor', label: 'Espace Pasteur 📖' }]
-              : []),
+            {
+              id: 'pastor',
+              label: currentUser?.role === 'PASTEUR' ? 'Espace Pasteur 📖' : 'Espace Pasteur 🔒',
+            },
+            { id: 'coeur_honneur', label: 'Cœur d’Honneur 💖' },
             { id: 'presence_culte', label: 'Pointage Culte 🙏' },
             { id: 'familles_honneur', label: "Familles d'Honneur 📍" },
-            { id: 'portes', label: '12 Portes d\'Influence' },
             { id: 'tribus', label: '12 Tribus' },
+            { id: 'departements', label: 'Départements' },
+            { id: 'portes', label: '12 Portes d\'Influence' },
             { id: 'membres', label: 'Annuaire' },
             { id: 'market', label: 'Market' },
             { id: 'opportunites', label: 'Emplois' },
             { id: 'ads', label: 'Boutiques' },
-            { id: 'departements', label: 'Départements' },
             { id: 'evenements', label: 'Événements' },
           ].map((tab) => (
             <button
@@ -81,9 +83,13 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onSelectTab(tab.id)}
               className={`px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-[#0A3D36] text-white shadow-xs'
+                  ? tab.id === 'coeur_honneur'
+                    ? 'bg-[#541424] text-white shadow-xs'
+                    : 'bg-[#0A3D36] text-white shadow-xs'
                   : tab.id === 'pastor'
                   ? 'text-[#0A3D36] bg-amber-50 hover:bg-amber-100/80 border border-[#C59A27]/40'
+                  : tab.id === 'coeur_honneur'
+                  ? 'text-[#541424] bg-rose-50 hover:bg-rose-100/80 border border-rose-200/60 font-black'
                   : 'text-slate-600 hover:text-[#0A3D36] hover:bg-slate-100'
               }`}
             >
@@ -294,6 +300,16 @@ export const Header: React.FC<HeaderProps> = ({
                       <Users className="w-3.5 h-3.5 text-[#C59A27]" />
                       Familles d'Honneur
                     </button>
+                    <button
+                      onClick={() => {
+                        onSelectTab('coeur_honneur');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left text-xs py-1.5 px-2 rounded-lg bg-rose-50/80 hover:bg-rose-100 text-[#541424] font-bold flex items-center gap-1.5 border border-rose-200/50"
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />
+                      Le Cœur d’Honneur (Entraide & Social)
+                    </button>
                     {currentUser.role === 'ADMIN' && (
                       <button
                         onClick={() => {
@@ -313,10 +329,10 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 bg-[#0A3D36] hover:bg-[#0D473E] text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xs transition-colors"
+              className="flex items-center gap-1.5 bg-[#0A3D36] hover:bg-[#0D473E] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs transition-colors"
             >
               <LogIn className="w-3.5 h-3.5 text-[#C59A27]" />
-              <span>Connexion (OTP)</span>
+              <span>S'inscrire / Connexion</span>
             </button>
           )}
         </div>

@@ -22,6 +22,7 @@ import { TribesView } from './components/TribesView';
 import { FamillesHonneurView } from './components/FamillesHonneurView';
 import { PastorSpaceView } from './components/pastor/PastorSpaceView';
 import { PastorAccessGuard } from './components/pastor/PastorAccessGuard';
+import { CoeurHonneurView } from './components/CoeurHonneurView';
 import { InviteWelcomeModal } from './components/InviteWelcomeModal';
 import { InviteMemberModal } from './components/InviteMemberModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
@@ -36,10 +37,11 @@ import {
   MOCK_COMMUNITY_POSTS,
   MOCK_NOTIFICATIONS,
 } from './data/mockData';
-import { INITIAL_GATE_MEMBERS } from './data/influenceGatesData';
+import { INITIAL_GATE_MEMBERS, INFLUENCE_GATES } from './data/influenceGatesData';
 import { INITIAL_TRIBES, INITIAL_TRIBE_MEMBERS } from './data/tribesData';
 import { INITIAL_FAMILLES_HONNEUR, INITIAL_FAMILLE_INSCRIPTIONS } from './data/famillesHonneurData';
 import { INITIAL_DEPARTMENTS_DATA } from './data/departmentsData';
+import { INITIAL_COEUR_CAMPAGNES, INITIAL_COEUR_DEMANDES } from './data/coeurHonneurData';
 import {
   INITIAL_CULTES_RESUMES,
   INITIAL_RAPPORT_TEMPLATES,
@@ -69,6 +71,8 @@ import {
   CulteServiceType,
   DepartmentItem,
   DepartmentMember,
+  CoeurCampagneAide,
+  CoeurDemandeAide,
 } from './types';
 
 export default function App() {
@@ -82,6 +86,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
   const [gateMembers, setGateMembers] = useState<GateMemberProfile[]>(INITIAL_GATE_MEMBERS);
   const [selectedGateIdForView, setSelectedGateIdForView] = useState<InfluenceGateId | undefined>(undefined);
+  const [selectedGateSubTabForView, setSelectedGateSubTabForView] = useState<'MEMBRES' | 'RESPONSABLE' | 'VISION' | undefined>(undefined);
   const [tribes, setTribes] = useState(INITIAL_TRIBES);
   const [tribeMembers, setTribeMembers] = useState<TribeMember[]>(INITIAL_TRIBE_MEMBERS);
   const [selectedTribeIdForView, setSelectedTribeIdForView] = useState<TribeId | undefined>(undefined);
@@ -102,6 +107,123 @@ export default function App() {
   const [inviteEmailHint, setInviteEmailHint] = useState('siloestore44@gmail.com');
   const [isCreateAdModalOpen, setIsCreateAdModalOpen] = useState(false);
   const [isProfessionalProfileModalOpen, setIsProfessionalProfileModalOpen] = useState(false);
+
+  // Le Cœur d'Honneur - State (avec LocalStorage + données initiales)
+  const [coeurCampagnes, setCoeurCampagnes] = useState<CoeurCampagneAide[]>(() => {
+    try {
+      const saved = localStorage.getItem('vases_coeur_campagnes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Erreur lecture coeur_campagnes localStorage', e);
+    }
+    return INITIAL_COEUR_CAMPAGNES;
+  });
+
+  const [coeurDemandes, setCoeurDemandes] = useState<CoeurDemandeAide[]>(() => {
+    try {
+      const saved = localStorage.getItem('vases_coeur_demandes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Erreur lecture coeur_demandes localStorage', e);
+    }
+    return INITIAL_COEUR_DEMANDES;
+  });
+
+  const [coeurCampagneParamId, setCoeurCampagneParamId] = useState<string | undefined>(undefined);
+
+  const handleAddCoeurDemande = (newDemande: CoeurDemandeAide) => {
+    setCoeurDemandes(prev => {
+      const updated = [newDemande, ...prev];
+      try {
+        localStorage.setItem('vases_coeur_demandes', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    // Incrémenter les demandes de la campagne si liée
+    if (newDemande.campagneId) {
+      setCoeurCampagnes(prev => {
+        const updated = prev.map(c =>
+          c.id === newDemande.campagneId
+            ? { ...c, nombreDemandesRecues: (c.nombreDemandesRecues || 0) + 1 }
+            : c
+        );
+        try {
+          localStorage.setItem('vases_coeur_campagnes', JSON.stringify(updated));
+        } catch (e) {
+          console.error(e);
+        }
+        return updated;
+      });
+    }
+    fetch('/api/coeur-honneur/demandes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newDemande),
+    }).catch(() => {});
+  };
+
+  const handleUpdateCoeurDemande = (updatedDemande: CoeurDemandeAide) => {
+    setCoeurDemandes(prev => {
+      const updated = prev.map(d => (d.id === updatedDemande.id ? updatedDemande : d));
+      try {
+        localStorage.setItem('vases_coeur_demandes', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    fetch(`/api/coeur-honneur/demandes/${updatedDemande.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedDemande),
+    }).catch(() => {});
+  };
+
+  const handleAddCoeurCampagne = (newCampagne: CoeurCampagneAide) => {
+    setCoeurCampagnes(prev => {
+      const updated = [newCampagne, ...prev];
+      try {
+        localStorage.setItem('vases_coeur_campagnes', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    fetch('/api/coeur-honneur/campagnes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCampagne),
+    }).catch(() => {});
+  };
+
+  const handleContributeCoeurCampagne = (campagneId: string, montant: number) => {
+    setCoeurCampagnes(prev => {
+      const updated = prev.map(c => {
+        if (c.id === campagneId) {
+          return {
+            ...c,
+            montantCollecte: (c.montantCollecte || 0) + montant,
+            nombreContributeurs: (c.nombreContributeurs || 0) + 1,
+          };
+        }
+        return c;
+      });
+      try {
+        localStorage.setItem('vases_coeur_campagnes', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
 
   // Departments State (with LocalStorage + initial data)
   const [departments, setDepartments] = useState<DepartmentItem[]>(() => {
@@ -176,6 +298,11 @@ export default function App() {
       const exists = prev.some(m => m.id === user.id);
       return exists ? prev.map(m => m.id === user.id ? user : m) : [user, ...prev];
     });
+    fetch('/api/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    }).catch(() => {});
   };
 
   const handleUserLogout = () => {
@@ -254,6 +381,12 @@ export default function App() {
       const requestedTab = searchParams.get('tab');
       const requestedDate = searchParams.get('date');
       const requestedCulte = searchParams.get('culte') as CulteServiceType | null;
+      const requestedCampagne = searchParams.get('campagne') || searchParams.get('coeur_campagne');
+
+      if (requestedCampagne) {
+        setCoeurCampagneParamId(requestedCampagne);
+        setActiveTab('coeur_honneur');
+      }
 
       if (requestedDate) {
         setPresenceParamDate(requestedDate);
@@ -268,11 +401,42 @@ export default function App() {
       } else if (requestedTab) {
         setActiveTab(requestedTab);
       }
+
+      const requestedGate = searchParams.get('gate') as InfluenceGateId | null;
+      const requestedGateSubTab = searchParams.get('gateSubTab') || searchParams.get('subtab');
+      if (requestedGate) {
+        setSelectedGateIdForView(requestedGate);
+        if (requestedGateSubTab === 'responsable' || requestedGateSubTab === 'RESPONSABLE') {
+          setSelectedGateSubTabForView('RESPONSABLE');
+        } else if (requestedGateSubTab === 'vision' || requestedGateSubTab === 'VISION') {
+          setSelectedGateSubTabForView('VISION');
+        }
+        setActiveTab('portes');
+      }
     } catch {
       // Ignored if URL parsing fails
     }
 
     window.addEventListener('popstate', handlePopState);
+
+    // Fetch live Cœur d'Honneur (campagnes et demandes)
+    fetch('/api/coeur-honneur/campagnes')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCoeurCampagnes(data);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/coeur-honneur/demandes')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCoeurDemandes(data);
+        }
+      })
+      .catch(() => {});
 
     // Fetch live Familles d'Honneur
     fetch('/api/familles-honneur')
@@ -501,6 +665,96 @@ export default function App() {
     }).catch(() => {});
   };
 
+  const handleRegisterMember = (
+    user: UserProfile,
+    affiliation: {
+      tribeId: TribeId;
+      departmentId: string;
+      detectedGateId: InfluenceGateId;
+      familleHonneurId?: string;
+    }
+  ) => {
+    // 1. Établir la session membre
+    handleUserLoginSuccess(user);
+
+    // 2. Rattachement automatique à la Tribu choisie
+    const newTribeMember: TribeMember = {
+      id: 'tm-' + user.id,
+      tribeId: affiliation.tribeId,
+      nom: user.lastName,
+      prenom: user.firstName,
+      numero: user.phone,
+      quartier: user.quartier || 'Cotonou',
+      photoUrl: user.photoUrl,
+      roleInTribe: 'MEMBRE',
+      registeredAt: new Date().toISOString().split('T')[0],
+      userId: user.id,
+    };
+    handleSaveTribeMember(newTribeMember, false);
+
+    // 3. Rattachement automatique au Département choisi
+    const dept = departments.find(d => d.id === affiliation.departmentId);
+    const newDeptMember: DepartmentMember = {
+      id: 'dep-m-' + user.id,
+      departmentId: affiliation.departmentId,
+      memberId: user.id,
+      nom: user.lastName,
+      prenom: user.firstName,
+      telephone: user.phone,
+      email: user.email,
+      roleInDepartment: 'Membre Actif',
+      dateAdhesion: new Date().toISOString().split('T')[0],
+      competences: user.skills && user.skills.length > 0 ? user.skills : [user.profession],
+      photoUrl: user.photoUrl,
+    };
+    handleAddMemberToDepartment(affiliation.departmentId, newDeptMember);
+
+    // 4. Rattachement automatique à la Porte d'Influence correspondante
+    const gate = INFLUENCE_GATES.find(g => g.id === affiliation.detectedGateId);
+    if (gate) {
+      const newGateProfile: GateMemberProfile = {
+        id: 'gp-' + user.id,
+        userId: user.id,
+        gateId: affiliation.detectedGateId,
+        memberName: `${user.firstName} ${user.lastName}`,
+        memberProfession: user.profession,
+        memberPhoto: user.photoUrl,
+        memberPhone: user.phone,
+        memberCity: user.city || 'Cotonou',
+        memberCountry: user.country || 'Bénin',
+        roleInGate: 'Professionnel / Cadre',
+        subSector: gate.keySubSectors[0] || user.profession,
+        visionImpact: `Membre engagé dans la Porte ${gate.name} pour manifester les valeurs du Royaume.`,
+        skills: user.skills || [user.profession],
+        seekingCollaboration: true,
+        openForMentoring: true,
+        whatsappContact: user.phone,
+        emailContact: user.email,
+        registeredAt: new Date().toISOString().split('T')[0],
+      };
+      handleSaveGateProfile(newGateProfile);
+    }
+
+    // 5. Rattachement automatique à la Famille d'Honneur (cellule de proximité)
+    if (affiliation.familleHonneurId) {
+      const newInscription: FamilleHonneurInscription = {
+        id: 'fhi-' + user.id,
+        familleId: affiliation.familleHonneurId,
+        userId: user.id,
+        nom: user.lastName,
+        prenom: user.firstName,
+        telephone: user.phone,
+        whatsapp: user.phone,
+        quartier: user.quartier || 'Cotonou',
+        profession: user.profession,
+        statutMembre: 'MEMBRE_REGULIER',
+        dateInscription: new Date().toISOString().split('T')[0],
+        statut: 'PARTICIPANT_ACTIF',
+      };
+      handleSaveFamilleInscription(newInscription);
+    }
+  };
+
   const handleAddCulte = (newCulte: CulteResume) => {
     setCultes(prev => [newCulte, ...prev]);
     fetch('/api/pastor/cultes', {
@@ -676,6 +930,22 @@ export default function App() {
           )
         )}
 
+        {activeTab === 'coeur_honneur' && (
+          <CoeurHonneurView
+            currentUser={currentUser}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            demandes={coeurDemandes}
+            campagnes={coeurCampagnes}
+            onAddDemande={handleAddCoeurDemande}
+            onUpdateDemande={handleUpdateCoeurDemande}
+            onAddCampagne={handleAddCoeurCampagne}
+            onContributeCampagne={handleContributeCoeurCampagne}
+            initialCampagneId={coeurCampagneParamId}
+            tribes={tribes}
+            famillesHonneur={famillesHonneur}
+          />
+        )}
+
         {activeTab === 'presence_culte' && (
           <CultePresenceConfirmationView
             tribes={tribes}
@@ -694,8 +964,11 @@ export default function App() {
             currentUser={currentUser}
             familles={famillesHonneur}
             inscriptions={familleInscriptions}
+            presences={cultesPresences}
+            rapportTemplates={rapportTemplates}
             onSaveFamille={handleSaveFamille}
             onSaveInscription={handleSaveFamilleInscription}
+            onSubmitReport={handleAddRapport}
             onBackToHome={() => handleNavigateTab('accueil')}
             onOpenAuth={() => setIsAuthModalOpen(true)}
           />
@@ -707,7 +980,9 @@ export default function App() {
             tribes={tribes}
             tribeMembers={tribeMembers}
             presences={cultesPresences}
+            rapportTemplates={rapportTemplates}
             onAddPresence={handleAddCultePresence}
+            onSubmitReport={handleAddRapport}
             initialTribeId={selectedTribeIdForView}
             onSaveMember={handleSaveTribeMember}
             onSaveTribeMember={handleSaveTribeMember}
@@ -721,6 +996,7 @@ export default function App() {
             currentUser={currentUser}
             gateMembers={gateMembers}
             initialGateId={selectedGateIdForView}
+            initialSubTab={selectedGateSubTabForView}
             onSaveGateProfile={handleSaveGateProfile}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onBackToHome={() => handleNavigateTab('accueil')}
@@ -796,8 +1072,11 @@ export default function App() {
             departments={departments}
             currentUser={currentUser}
             existingUsers={members}
+            presences={cultesPresences}
+            rapportTemplates={rapportTemplates}
             onAddDepartment={handleAddDepartment}
             onAddMemberToDepartment={handleAddMemberToDepartment}
+            onSubmitReport={handleAddRapport}
             onOpenAssistantWithPrompt={handleOpenAssistant}
             onBackToHome={() => handleNavigateTab('accueil')}
           />
@@ -858,7 +1137,14 @@ export default function App() {
           handleUserLoginSuccess(user);
           setIsAuthModalOpen(false);
         }}
+        onRegisterMember={(user, affiliation) => {
+          handleRegisterMember(user, affiliation);
+          setIsAuthModalOpen(false);
+        }}
         availableMembers={members}
+        tribes={tribes}
+        departments={departments}
+        famillesHonneur={famillesHonneur}
       />
 
       {/* Member Invite Link Generation Modal */}
@@ -876,7 +1162,14 @@ export default function App() {
           handleUserLoginSuccess(user);
           setIsInviteWelcomeModalOpen(false);
         }}
+        onRegisterMember={(user, affiliation) => {
+          handleRegisterMember(user, affiliation);
+          setIsInviteWelcomeModalOpen(false);
+        }}
         defaultEmail={inviteEmailHint}
+        tribes={tribes}
+        departments={departments}
+        famillesHonneur={famillesHonneur}
       />
 
       {/* Create Ad & Promotion Modal */}

@@ -7,7 +7,8 @@ import { INFLUENCE_GATES, INITIAL_GATE_MEMBERS } from './src/data/influenceGates
 import { INITIAL_TRIBES, INITIAL_TRIBE_MEMBERS } from './src/data/tribesData';
 import { INITIAL_FAMILLES_HONNEUR, INITIAL_FAMILLE_INSCRIPTIONS } from './src/data/famillesHonneurData';
 import { INITIAL_CULTES_RESUMES, INITIAL_RAPPORT_TEMPLATES, INITIAL_RAPPORTS_SOUMIS, INITIAL_RAPPORTS_SPECIAUX, INITIAL_CULTE_PRESENCES } from './src/data/pastorData';
-import { UserProfile, ProductItem, OpportunityItem, AISearchResult, GateMemberProfile, TribeMember, TribeInfo, FamilleHonneur, FamilleHonneurInscription, CulteResume, RapportTemplate, RapportSoumis, RapportSpecial, CultePresenceRecord, DepartmentItem, DepartmentMember } from './src/types';
+import { INITIAL_COEUR_CAMPAGNES, INITIAL_COEUR_DEMANDES } from './src/data/coeurHonneurData';
+import { UserProfile, ProductItem, OpportunityItem, AISearchResult, GateMemberProfile, TribeMember, TribeInfo, FamilleHonneur, FamilleHonneurInscription, CulteResume, RapportTemplate, RapportSoumis, RapportSpecial, CultePresenceRecord, DepartmentItem, DepartmentMember, CoeurCampagneAide, CoeurDemandeAide } from './src/types';
 
 dotenv.config();
 
@@ -33,6 +34,8 @@ let rapportTemplates: RapportTemplate[] = [...INITIAL_RAPPORT_TEMPLATES];
 let rapportsSoumis: RapportSoumis[] = [...INITIAL_RAPPORTS_SOUMIS];
 let rapportsSpeciaux: RapportSpecial[] = [...INITIAL_RAPPORTS_SPECIAUX];
 let cultesPresences: CultePresenceRecord[] = [...INITIAL_CULTE_PRESENCES];
+let coeurCampagnes: CoeurCampagneAide[] = [...INITIAL_COEUR_CAMPAGNES];
+let coeurDemandes: CoeurDemandeAide[] = [...INITIAL_COEUR_DEMANDES];
 
 // Lazy initialize Gemini AI client
 let aiClient: GoogleGenAI | null = null;
@@ -248,6 +251,55 @@ app.post('/api/familles-honneur/inscriptions', (req, res) => {
   }
 
   res.json({ success: true, inscription });
+});
+
+// ==========================================
+// LE CŒUR D'HONNEUR - ESPACE SOCIAL API
+// ==========================================
+
+app.get('/api/coeur-honneur/campagnes', (req, res) => {
+  res.json(coeurCampagnes);
+});
+
+app.post('/api/coeur-honneur/campagnes', (req, res) => {
+  const nouvelleCampagne: CoeurCampagneAide = req.body;
+  if (!nouvelleCampagne.id) {
+    nouvelleCampagne.id = `camp-${Date.now()}`;
+  }
+  coeurCampagnes.unshift(nouvelleCampagne);
+  res.json({ success: true, campagne: nouvelleCampagne });
+});
+
+app.get('/api/coeur-honneur/demandes', (req, res) => {
+  res.json(coeurDemandes);
+});
+
+app.post('/api/coeur-honneur/demandes', (req, res) => {
+  const nouvelleDemande: CoeurDemandeAide = req.body;
+  if (!nouvelleDemande.id) {
+    nouvelleDemande.id = `dem-${Date.now()}`;
+  }
+  coeurDemandes.unshift(nouvelleDemande);
+  // Incrémenter le compteur de la campagne si liée
+  if (nouvelleDemande.campagneId) {
+    const cIdx = coeurCampagnes.findIndex(c => c.id === nouvelleDemande.campagneId);
+    if (cIdx !== -1) {
+      coeurCampagnes[cIdx].nombreDemandesRecues = (coeurCampagnes[cIdx].nombreDemandesRecues || 0) + 1;
+    }
+  }
+  res.json({ success: true, demande: nouvelleDemande });
+});
+
+app.put('/api/coeur-honneur/demandes/:id', (req, res) => {
+  const { id } = req.params;
+  const updatedData: Partial<CoeurDemandeAide> = req.body;
+  const dIdx = coeurDemandes.findIndex(d => d.id === id);
+  if (dIdx !== -1) {
+    coeurDemandes[dIdx] = { ...coeurDemandes[dIdx], ...updatedData };
+    res.json({ success: true, demande: coeurDemandes[dIdx] });
+  } else {
+    res.status(404).json({ error: 'Demande non trouvée' });
+  }
 });
 
 // ==========================================

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { PASTORAL_ACCESS_PASSCODE, PASTOR_USER_PROFILE } from '../../data/pastorData';
+import { getPastorCustomPasscode } from '../../data/leadershipData';
 
 interface PastorAccessGuardProps {
   currentUser: UserProfile | null;
@@ -36,7 +37,13 @@ export const PastorAccessGuard: React.FC<PastorAccessGuardProps> = ({
     setIsVerifying(true);
 
     setTimeout(() => {
-      if (passcode.trim() === PASTORAL_ACCESS_PASSCODE || passcode.trim().toLowerCase() === 'pasteur2026') {
+      const customCode = getPastorCustomPasscode();
+      const entered = passcode.trim();
+      if (
+        entered === customCode ||
+        entered === PASTORAL_ACCESS_PASSCODE ||
+        entered.toLowerCase() === 'pasteur2026'
+      ) {
         setIsVerifying(false);
         onPastorUnlocked(PASTOR_USER_PROFILE);
       } else {
@@ -113,82 +120,57 @@ export const PastorAccessGuard: React.FC<PastorAccessGuardProps> = ({
             </div>
           )}
 
-          {/* Bouton Majeur : Retour à l'accueil pour les membres */}
-          <div className="space-y-3">
-            <button
-              onClick={onBackToHome}
-              className="w-full py-3.5 px-6 rounded-2xl bg-[#0A3D36] hover:bg-[#072a25] text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg hover:scale-101 active:scale-98 transition-all"
-            >
-              <Home className="w-4 h-4 text-[#E5B22F]" />
-              <span>Retourner à l'Accueil Membre</span>
-            </button>
+          {/* Formulaire direct de Déverrouillage réservé à la chaire pastorale */}
+          <div className="pt-2 border-t border-slate-100">
+            <form onSubmit={handleVerifyPasscode} className="space-y-3.5 text-left bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                  <KeyRound className="w-4 h-4 text-[#C59A27]" />
+                  <span>Mot de Passe / Code Pastoral</span>
+                </label>
+                <span className="text-[10px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                  (Code démo : <strong>7777</strong>)
+                </span>
+              </div>
 
-            <p className="text-[11px] text-slate-500">
-              Retrouvez votre tribu, vos annonces, les événements et le pointage dominical sur l'accueil.
-            </p>
+              <div className="relative">
+                <input
+                  type="password"
+                  autoFocus
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Saisissez votre code confidentiel (7777)..."
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 bg-white focus:ring-2 focus:ring-[#0A3D36] focus:outline-hidden shadow-xs"
+                />
+              </div>
+
+              {error && (
+                <p className="text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{error}</span>
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isVerifying || !passcode.trim()}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#0A3D36] to-[#135E54] hover:from-[#062722] hover:to-[#0A3D36] text-white text-xs font-black flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50 hover:scale-101 active:scale-98"
+              >
+                <Crown className="w-4 h-4 text-[#E5B22F]" />
+                <span>{isVerifying ? 'Vérification en cours...' : 'Déverrouiller l\'Espace Pasteur'}</span>
+              </button>
+            </form>
           </div>
 
-          {/* Déverrouillage réservé à la chaire pastorale */}
-          <div className="pt-4 border-t border-slate-100">
-            {!showPastorUnlock ? (
-              <button
-                type="button"
-                onClick={() => setShowPastorUnlock(true)}
-                className="text-xs text-slate-400 hover:text-slate-600 font-semibold flex items-center justify-center gap-1.5 mx-auto transition-colors"
-              >
-                <KeyRound className="w-3.5 h-3.5 text-[#C59A27]" />
-                <span>Vous êtes le Pasteur Principal ? Déverrouiller la chaire</span>
-              </button>
-            ) : (
-              <form onSubmit={handleVerifyPasscode} className="space-y-3 text-left">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Crown className="w-3.5 h-3.5 text-[#C59A27]" />
-                    <span>Code Pastoral Secret</span>
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-mono">(Code démo : 7777)</span>
-                </div>
-
-                <div className="relative">
-                  <input
-                    type="password"
-                    autoFocus
-                    value={passcode}
-                    onChange={(e) => setPasscode(e.target.value)}
-                    placeholder="Entrez le code pastoral..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-[#0A3D36] focus:outline-hidden"
-                  />
-                </div>
-
-                {error && (
-                  <p className="text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded-lg border border-rose-200">
-                    {error}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={isVerifying || !passcode.trim()}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0A3D36] to-[#135E54] hover:from-[#062722] hover:to-[#0A3D36] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  >
-                    {isVerifying ? 'Vérification...' : 'Ouvrir l\'Espace Pasteur'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPastorUnlock(false);
-                      setError(null);
-                      setPasscode('');
-                    }}
-                    className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </form>
-            )}
+          {/* Bouton pour les membres : Retour à l'accueil */}
+          <div className="pt-2">
+            <button
+              onClick={onBackToHome}
+              className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+            >
+              <Home className="w-3.5 h-3.5 text-slate-400" />
+              <span>Je suis un fidèle / membre — Retour à l'accueil</span>
+            </button>
           </div>
         </div>
       </div>

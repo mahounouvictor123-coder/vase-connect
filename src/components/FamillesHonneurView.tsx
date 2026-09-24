@@ -19,7 +19,7 @@ import {
   ExternalLink,
   ArrowLeft,
 } from 'lucide-react';
-import { FamilleHonneur, FamilleHonneurInscription, UserProfile } from '../types';
+import { FamilleHonneur, FamilleHonneurInscription, UserProfile, CultePresenceRecord } from '../types';
 import {
   COMMUNES_LIST,
   QUARTIERS_LIST,
@@ -32,13 +32,21 @@ import { FamillesHonneurMap } from './FamillesHonneurMap';
 import { JoinFamilleModal } from './JoinFamilleModal';
 import { ProposeFamilleModal } from './ProposeFamilleModal';
 import { FamilleDetailModal } from './FamilleDetailModal';
+import { LeadershipGuardModal } from './LeadershipGuardModal';
+import { CreateSendReportModal } from './CreateSendReportModal';
+import { RapportSoumis, RapportTemplate } from '../types';
+import { LeadershipAccount } from '../data/leadershipData';
+import { Lock, FileText, Send } from 'lucide-react';
 
 interface FamillesHonneurViewProps {
   currentUser: UserProfile | null;
   familles: FamilleHonneur[];
   inscriptions?: FamilleHonneurInscription[];
+  presences?: CultePresenceRecord[];
+  rapportTemplates?: RapportTemplate[];
   onSaveFamille: (famille: FamilleHonneur) => void;
   onSaveInscription: (inscription: FamilleHonneurInscription) => void;
+  onSubmitReport?: (rapport: RapportSoumis) => void;
   onBackToHome?: () => void;
   onOpenAuth?: () => void;
 }
@@ -47,8 +55,11 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
   currentUser,
   familles,
   inscriptions = [],
+  presences = [],
+  rapportTemplates = [],
   onSaveFamille,
   onSaveInscription,
+  onSubmitReport,
   onBackToHome,
   onOpenAuth,
 }) => {
@@ -63,6 +74,12 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
     'berger' | 'hote_maison' | 'photos_reunions' | 'inscription' | 'localisation'
   >('berger');
   const [isProposeModalOpen, setIsProposeModalOpen] = useState(false);
+
+  // Leadership Guard & Reporting Modals for Bergers
+  const [isBergerGuardOpen, setIsBergerGuardOpen] = useState(false);
+  const [isCreateReportOpen, setIsCreateReportOpen] = useState(false);
+  const [unlockedBergerFamille, setUnlockedBergerFamille] = useState<FamilleHonneur | null>(null);
+  const [activeBergerAccount, setActiveBergerAccount] = useState<LeadershipAccount | null>(null);
 
   // User GPS coordinates
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -337,6 +354,19 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
                 <span>{isLocating ? 'Localisation en cours...' : 'Trouver ma Famille la plus proche'}</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setUnlockedBergerFamille(null);
+                setIsBergerGuardOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#C59A27] hover:bg-[#E5B22F] text-slate-950 text-xs font-black shadow-md flex items-center gap-2 transition-all hover:scale-102 active:scale-95 border border-amber-300"
+              title="Accès sécurisé réservé aux Bergers (code secret requis)"
+            >
+              <Lock className="w-4 h-4 text-slate-950" />
+              <span>Espace Berger & Rapports 🔒</span>
+            </button>
 
             <button
               type="button"
@@ -953,8 +983,21 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
 
                         <button
                           type="button"
+                          onClick={() => {
+                            setUnlockedBergerFamille(famille);
+                            setIsBergerGuardOpen(true);
+                          }}
+                          className="py-2 px-2.5 rounded-xl border border-[#C59A27]/60 bg-amber-50 hover:bg-amber-100 text-[#0A3D36] text-xs font-black transition-colors flex items-center gap-1 shadow-2xs"
+                          title="Rédiger et envoyer un rapport de cette famille d'honneur au Pasteur"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-[#C59A27]" />
+                          <span>Rapport 📝</span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => openDetailModal(famille, 'photos_reunions')}
-                          className="py-2 px-2.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-slate-800 text-xs font-bold transition-colors flex items-center gap-1"
+                          className="py-2 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1"
                           title="Publier ou voir photos de famille après réunion"
                         >
                           <Camera className="w-3.5 h-3.5 text-[#C59A27]" />
@@ -997,6 +1040,7 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
           famille={selectedFamilleForDetail}
           currentUser={currentUser}
           inscriptions={inscriptions}
+          presences={presences}
           initialTab={detailModalInitialTab}
           onClose={() => setSelectedFamilleForDetail(null)}
           onJoin={f => setSelectedFamilleForJoin(f)}
@@ -1028,6 +1072,46 @@ export const FamillesHonneurView: React.FC<FamillesHonneurViewProps> = ({
           onClose={() => setIsProposeModalOpen(false)}
           onSubmit={famille => {
             onSaveFamille(famille);
+          }}
+        />
+      )}
+
+      {/* Leadership Access Guard for Berger */}
+      {isBergerGuardOpen && (
+        <LeadershipGuardModal
+          category="BERGER_FAMILLE"
+          title="Espace Sécurisé • Berger de Famille d'Honneur"
+          targetName={unlockedBergerFamille ? unlockedBergerFamille.nom : "Familles d'Honneur & Cellules"}
+          currentUser={currentUser}
+          onClose={() => setIsBergerGuardOpen(false)}
+          onUnlocked={(account) => {
+            setActiveBergerAccount(account);
+            setIsBergerGuardOpen(false);
+            if (unlockedBergerFamille) {
+              openDetailModal(unlockedBergerFamille, 'berger');
+            } else {
+              setIsCreateReportOpen(true);
+            }
+          }}
+          onOpenCreateReport={() => {
+            setIsBergerGuardOpen(false);
+            setIsCreateReportOpen(true);
+          }}
+        />
+      )}
+
+      {/* Create & Send Report Modal directly to Pastor */}
+      {isCreateReportOpen && (
+        <CreateSendReportModal
+          category="BERGER_FAMILLE"
+          defaultEntityName={unlockedBergerFamille?.nom || activeBergerAccount?.targetName || "Famille d'Honneur Grâce & Vie"}
+          defaultLeaderName={activeBergerAccount?.holderName || unlockedBergerFamille?.bergerNom || ""}
+          defaultLeaderPhone={activeBergerAccount?.phone || unlockedBergerFamille?.bergerPhone || ""}
+          templates={rapportTemplates}
+          currentUser={currentUser}
+          onClose={() => setIsCreateReportOpen(false)}
+          onSubmitReport={(report) => {
+            if (onSubmitReport) onSubmitReport(report);
           }}
         />
       )}

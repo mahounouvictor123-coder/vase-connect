@@ -42,9 +42,9 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
   const [champs, setChamps] = useState<RapportTemplateField[]>([
     {
       id: 'field_1',
-      label: 'Cellule / Entité ou Équipe',
+      label: 'Famille d\'Honneur / Entité ou Tribu',
       type: 'text',
-      placeholder: 'Ex: Équipe Alpha, Zone Calavi...',
+      placeholder: 'Ex: Famille Grâce & Vie, Tribu de Juda...',
       required: true,
     },
     {

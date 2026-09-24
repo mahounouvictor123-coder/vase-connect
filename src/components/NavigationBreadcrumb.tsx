@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Home, ChevronRight, Sparkles, ShoppingBag, Briefcase, Users, Store, Crown, BookOpen } from 'lucide-react';
+import { ArrowLeft, Home, ChevronRight, Sparkles, ShoppingBag, Briefcase, Users, Store, Crown, BookOpen, Heart } from 'lucide-react';
 
 interface NavigationBreadcrumbProps {
   activeTab: string;
@@ -7,6 +7,11 @@ interface NavigationBreadcrumbProps {
 }
 
 const TAB_CONFIG: Record<string, { title: string; category: string; icon?: React.ReactNode }> = {
+  coeur_honneur: {
+    title: "Le Cœur d'Honneur — Espace Social & Campagnes d'Entraide",
+    category: 'Entraide & Solidarité',
+    icon: <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />,
+  },
   presence_culte: {
     title: 'Confirmation de Présence au Culte — 1er Culte (07h30) & 2ème Culte (10h30)',
     category: 'Culte Dominical & Tribus',

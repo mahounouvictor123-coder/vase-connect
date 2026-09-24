@@ -1,4 +1,4 @@
-export type Role = 'PASTEUR' | 'SUPER_ADMIN' | 'ADMIN' | 'RESPONSABLE' | 'MODERATEUR' | 'MEMBRE' | 'VISITEUR';
+export type Role = 'PASTEUR' | 'SUPER_ADMIN' | 'ADMIN' | 'RESPONSABLE' | 'RESPONSABLE_COEUR_HONNEUR' | 'MODERATEUR' | 'MEMBRE' | 'VISITEUR';
 
 export type AvailabilityStatus = 'DISPONIBLE' | 'OCCUPE' | 'SUR_DEMANDE' | 'EN_MISSION';
 
@@ -33,6 +33,8 @@ export interface UserProfile {
   gateProfiles?: Record<string, GateMemberProfile>; // Profil détaillé par porte d'influence
   tribeId?: TribeId;
   tribeRole?: TribeRole;
+  quartier?: string;
+  familleHonneurId?: string;
   createdAt: string;
 }
 
@@ -190,6 +192,63 @@ export interface GateMemberProfile {
   registeredAt: string;
 }
 
+export interface GateResponsibleInfo {
+  id: string;
+  gateId: InfluenceGateId;
+  nom: string;
+  prenom?: string;
+  titre: string; // Ex: "Pilote Apostolique", "Responsable Référent"
+  profession: string;
+  organisation: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  photoUrl: string;
+  passcode: string;
+  mandatVision: string;
+  objectifsAnnuels: string[];
+  actionsPrioritaires: string[];
+}
+
+export interface GateProjectItem {
+  id: string;
+  gateId: InfluenceGateId;
+  titre: string;
+  description: string;
+  statut: 'PLANIFIE' | 'EN_COURS' | 'REALISE';
+  dateEcheance: string;
+  porteurProjet: string;
+  impactAttendu: string;
+  partenairesRecherches?: string;
+}
+
+export interface GateAnnouncementItem {
+  id: string;
+  gateId: InfluenceGateId;
+  titre: string;
+  contenu: string;
+  date: string;
+  auteur: string;
+  priorite: 'NORMALE' | 'HAUTE' | 'URGENTE';
+}
+
+export interface GateRapportPastorale {
+  id: string;
+  gateId: InfluenceGateId;
+  dateSoumission: string;
+  responsableNom: string;
+  sujet: string;
+  faitsMarquants: string;
+  statistiques: {
+    membresActifs: number;
+    synergiesLancees: number;
+    mentoresSuivis: number;
+  };
+  defisEtBesoins: string;
+  sujetsPriere: string;
+  transmisAuPasteur: boolean;
+}
+
 export interface InfluenceGate {
   id: InfluenceGateId;
   number: number; // 1 à 12
@@ -205,6 +264,7 @@ export interface InfluenceGate {
   keySubSectors: string[]; // Sous-secteurs d'intervention
   suggestedRoles: string[];
   bannerUrl: string;
+  responsable?: GateResponsibleInfo;
 }
 
 export type ProductCategory =
@@ -526,4 +586,81 @@ export interface RapportSpecial {
   dateGeneration: string;
   partageFormat: 'TEXTE' | 'WHATSAPP' | 'IMPRESSION';
 }
+
+// ==========================================
+// CŒUR D'HONNEUR - ESPACE SOCIAL & SOLIDARITÉ
+// ==========================================
+
+export type AideCategory =
+  | 'ALIMENTATION'
+  | 'SANTE'
+  | 'SCOLARITE'
+  | 'LOGEMENT'
+  | 'EMPLOI_MICROPROJET'
+  | 'SOUTIEN_MORAL_PRIERE'
+  | 'VESTIMENTAIRE'
+  | 'AUTRE';
+
+export type AideUrgenceLevel = 'CRITIQUE' | 'URGENT' | 'MODERE' | 'PONCTUEL';
+
+export type AideDemandeStatut =
+  | 'SOUMIS'
+  | 'EN_COURS'
+  | 'VALIDE'
+  | 'ACCOMPLI'
+  | 'REORIENTE'
+  | 'REFUSE';
+
+export interface CoeurDemandeAide {
+  id: string;
+  campagneId?: string;
+  campagneTitre?: string;
+  demandeurId?: string;
+  demandeurNom: string;
+  demandeurPrenom: string;
+  demandeurTelephone: string;
+  demandeurWhatsApp?: string;
+  demandeurEmail?: string;
+  demandeurQuartier: string;
+  demandeurTribuId?: TribeId;
+  demandeurFamilleHonneurId?: string;
+  categorie: AideCategory;
+  titre: string;
+  description: string;
+  niveauUrgence: AideUrgenceLevel;
+  montantEstime?: number; // En FCFA
+  natureBesoin?: string; // Ex: Sac de riz, Médicaments, Écolage
+  confidentialite: 'CONFIDENTIEL_EQUIPE' | 'PARTAGE_COMMUNAUTE';
+  nombrePersonnesFoyer?: number;
+  statut: AideDemandeStatut;
+  notesResponsable?: string;
+  aideAlloueeDescription?: string;
+  montantAlloue?: number;
+  dateTraitement?: string;
+  traitePar?: string;
+  createdAt: string;
+}
+
+export interface CoeurCampagneAide {
+  id: string;
+  titre: string;
+  description: string;
+  categorie: AideCategory;
+  objectifFinancier?: number; // En FCFA
+  fondsCollectes?: number;
+  objectifQuantite?: string; // Ex: "100 sacs de riz et vivres", "50 kits scolaires"
+  quantiteDistribuee?: string;
+  beneficiairesCibles: string;
+  dateDebut: string;
+  dateFin: string;
+  statut: 'ACTIVE' | 'CLOTUREE' | 'PREPARATION';
+  nombreDemandesRecues: number;
+  nombreAidesAccordees: number;
+  responsableNom: string;
+  responsableContact: string;
+  imageBannerUrl?: string;
+  lienPartage: string;
+  createdAt: string;
+}
+
 

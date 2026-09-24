@@ -215,10 +215,10 @@ export const INITIAL_RAPPORT_TEMPLATES: RapportTemplate[] = [
     titre: 'Rapport de Famille d\'Honneur',
     categorie: 'FAMILLE_HONNEUR',
     description:
-      'Compte-rendu de la réunion mensuelle de cellule de maison par le Berger ou l\'Hôte.',
+      'Compte-rendu de la réunion mensuelle de famille d\'honneur par le Berger ou l\'Hôte.',
     icone: 'Home',
     elementsObligatoires: [
-      'Cellule & Quartier',
+      'Famille d\'Honneur & Quartier',
       'Berger & Hôte',
       'Nombre de participants',
       'Nouvelles conversions / visiteurs',
@@ -228,7 +228,7 @@ export const INITIAL_RAPPORT_TEMPLATES: RapportTemplate[] = [
     champs: [
       {
         id: 'cellule_quartier',
-        label: 'Cellule & Localité',
+        label: 'Famille d\'Honneur & Localité',
         type: 'text',
         required: true,
         placeholder: 'Ex: Famille Grâce & Vie - Fidjrossè Plage',

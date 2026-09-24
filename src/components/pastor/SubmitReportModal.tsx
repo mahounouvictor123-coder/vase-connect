@@ -215,14 +215,14 @@ export const SubmitReportModal: React.FC<SubmitReportModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
-                    Entité ou Cellule concernée *
+                    Entité, Famille d'Honneur ou Tribu *
                   </label>
                   <input
                     type="text"
                     value={entiteConcernee}
                     onChange={e => setEntiteConcernee(e.target.value)}
                     required
-                    placeholder="Ex: Tribu de Ruben, Cellule Fidjrossè..."
+                    placeholder="Ex: Tribu de Ruben, Famille d'Honneur Grâce & Vie..."
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#0A3D36] text-xs font-bold text-slate-900"
                   />
                 </div>

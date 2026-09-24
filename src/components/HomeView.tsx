@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ShoppingBag, Users, Briefcase, ArrowRight, CheckCircle2, MessageCircle, Calendar, MapPin, Heart, Megaphone, Tag, Store, Award, Church, GraduationCap, Scale, Landmark, Vote, Radio, Sprout, Coins, Truck, Palette, HeartPulse, ShieldAlert, Crown, BookOpen, Share2 } from 'lucide-react';
+import { Sparkles, ShoppingBag, Users, Briefcase, ArrowRight, CheckCircle2, MessageCircle, Calendar, MapPin, Heart, HeartHandshake, Megaphone, Tag, Store, Award, Church, GraduationCap, Scale, Landmark, Vote, Radio, Sprout, Coins, Truck, Palette, HeartPulse, ShieldAlert, Crown, BookOpen, Share2 } from 'lucide-react';
 import { UserProfile, ProductItem, OpportunityItem, ChurchEvent, CommunityPost, MemberAd } from '../types';
 import { INFLUENCE_GATES } from '../data/influenceGatesData';
 import { INITIAL_TRIBES } from '../data/tribesData';
@@ -120,39 +120,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Quick Navigation Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
-        {currentUser?.role === 'PASTEUR' ? (
-          <button
-            onClick={() => onSelectTab('pastor')}
-            className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/60 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/20 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
-              <BookOpen className="w-5 h-5" />
+        {/* Espace Pasteur (accessible à tout moment avec code de sécurité 7777) */}
+        <button
+          onClick={() => onSelectTab('pastor')}
+          className="bg-gradient-to-br from-[#062722] via-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/60 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+          title="Accès confidentiel à la Chaire Pastorale (protégé par mot de passe)"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/20 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Espace Pasteur</h3>
+              <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">
+                {currentUser?.role === 'PASTEUR' ? 'CHAIRE' : 'PROTÉGÉ 🔒'}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-1">
-                <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Espace Pasteur</h3>
-                <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">CHAIRE</span>
-              </div>
-              <p className="text-[10px] text-amber-200/90 line-clamp-1">Cultes & Rapports</p>
-            </div>
-          </button>
-        ) : (
-          <button
-            onClick={onOpenInvite ? onOpenInvite : () => onSelectTab('presence_culte')}
-            className="bg-gradient-to-br from-[#0A3D36] to-[#135E54] text-white p-4 rounded-3xl border border-[#C59A27]/50 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-[#C59A27]/25 text-[#E5B22F] flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Share2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1">
-                <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-200">Inviter un Frère</h3>
-                <span className="px-1.5 py-0.2 text-[8px] font-black bg-[#C59A27] text-slate-950 rounded">INVITE</span>
-              </div>
-              <p className="text-[10px] text-emerald-100 line-clamp-1">Lien direct Gmail</p>
-            </div>
-          </button>
-        )}
+            <p className="text-[10px] text-amber-200/90 line-clamp-1">Cultes & Rapports</p>
+          </div>
+        </button>
 
         <button
           onClick={() => onSelectTab('portes')}
@@ -183,6 +169,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span className="px-1.5 py-0.2 text-[8px] font-black bg-amber-100 text-amber-900 rounded">12</span>
             </div>
             <p className="text-[10px] text-slate-500">Patriarches & Membres</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('coeur_honneur')}
+          className="bg-gradient-to-br from-[#3b0d18] to-[#541424] text-white p-4 rounded-3xl border border-rose-400/50 shadow-xs hover:shadow-md transition-all text-left space-y-2 group"
+          title="Le Cœur d’Honneur : Action Sociale, Demandes d'aide d'urgence et Solidarité Fraternelle"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <HeartHandshake className="w-5 h-5 text-rose-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-rose-200">Cœur d’Honneur</h3>
+              <span className="px-1.5 py-0.2 text-[8px] font-black bg-rose-500 text-white rounded">AIDE</span>
+            </div>
+            <p className="text-[10px] text-rose-200/90 line-clamp-1">Secours & Solidarité</p>
           </div>
         </button>
 

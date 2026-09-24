@@ -27,16 +27,22 @@ import {
   UserCheck,
   Building,
   Target,
-  Globe
+  Globe,
+  Shield,
+  ShieldCheck,
+  Briefcase
 } from 'lucide-react';
 import { InfluenceGateId, InfluenceGate, GateMemberProfile, UserProfile } from '../types';
 import { INFLUENCE_GATES } from '../data/influenceGatesData';
 import { GateRegistrationModal } from './GateRegistrationModal';
+import { GateResponsibleSpace } from './GateResponsibleSpace';
+import { GATE_RESPONSIBLES } from '../data/gateLeadershipData';
 
 interface InfluenceGatesViewProps {
   currentUser: UserProfile | null;
   gateMembers: GateMemberProfile[];
   initialGateId?: InfluenceGateId;
+  initialSubTab?: 'MEMBRES' | 'RESPONSABLE' | 'VISION';
   onSaveGateProfile: (profile: GateMemberProfile) => void;
   onOpenAuth: () => void;
   onBackToHome?: () => void;
@@ -62,12 +68,14 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
   currentUser,
   gateMembers,
   initialGateId,
+  initialSubTab,
   onSaveGateProfile,
   onOpenAuth,
   onBackToHome,
   onOpenAssistantWithPrompt,
 }) => {
   const [selectedGateId, setSelectedGateId] = useState<InfluenceGateId | null>(initialGateId || null);
+  const [gateSubTab, setGateSubTab] = useState<'MEMBRES' | 'RESPONSABLE' | 'VISION'>(initialSubTab || 'MEMBRES');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubSector, setSelectedSubSector] = useState<string>('ALL');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
@@ -127,12 +135,17 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
     return counts;
   }, [gateMembers]);
 
-  const handleSelectGate = (gateId: InfluenceGateId) => {
+  const handleSelectGate = (gateId: InfluenceGateId, targetTab: 'MEMBRES' | 'RESPONSABLE' | 'VISION' = 'MEMBRES') => {
     setSelectedGateId(gateId);
+    setGateSubTab(targetTab);
     setSelectedSubSector('ALL');
     setSelectedRoleFilter('ALL');
     setSearchTerm('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenGateResponsible = (gateId: InfluenceGateId) => {
+    handleSelectGate(gateId, 'RESPONSABLE');
   };
 
   const handleNavigatePrevious = () => {
@@ -363,6 +376,7 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
             {INFLUENCE_GATES.map((gate) => {
               const Icon = GATE_ICONS[gate.iconName] || Church;
               const count = gateMemberCounts[gate.id] || 0;
+              const leader = gate.responsable || GATE_RESPONSIBLES[gate.id];
               const isUserEnrolled = currentUser && gateMembers.some(
                 m => m.userId === currentUser.id && m.gateId === gate.id
               );
@@ -370,7 +384,7 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
               return (
                 <div
                   key={gate.id}
-                  onClick={() => handleSelectGate(gate.id)}
+                  onClick={() => handleSelectGate(gate.id, 'MEMBRES')}
                   className="group bg-white rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between cursor-pointer hover:border-[#0A3D36]/40"
                 >
                   <div className="p-5 space-y-3.5">
@@ -403,8 +417,33 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
                       </p>
                     </div>
 
+                    {/* Designated Gate Leader / Pilote Apostolique Badge */}
+                    {leader && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-amber-50/60 border border-amber-200/70 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <img
+                            src={leader.photoUrl}
+                            alt={`${leader.prenom} ${leader.nom}`}
+                            className="w-7 h-7 rounded-xl object-cover border border-[#C59A27] shrink-0 shadow-2xs"
+                          />
+                          <div className="truncate">
+                            <span className="text-[10px] uppercase font-black tracking-wider text-[#C59A27] block leading-none">
+                              Pilote Référent
+                            </span>
+                            <span className="text-xs font-bold text-[#0A3D36] truncate block">
+                              {leader.prenom} {leader.nom}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] font-bold text-slate-500 shrink-0 bg-white px-2 py-0.5 rounded-lg border border-slate-200/60">
+                          Porte {gate.number}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Apostolic Vision Excerpt */}
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
                       « {gate.apostolicVision} »
                     </p>
 
@@ -415,7 +454,7 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
                     </div>
 
                     {/* Key Sectors Preview */}
-                    <div className="flex flex-wrap gap-1 pt-1">
+                    <div className="flex flex-wrap gap-1 pt-0.5">
                       {gate.keySubSectors.slice(0, 3).map((sub, i) => (
                         <span
                           key={i}
@@ -432,17 +471,29 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Card Footer */}
-                  <div className="px-5 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 text-slate-600 font-bold">
-                      <Users className="w-4 h-4 text-[#0A3D36]" />
-                      <span>{count} {count > 1 ? 'membres inscrits' : 'membre inscrit'}</span>
-                    </div>
+                  {/* Card Footer with both Espace Responsable and Ouvrir Buttons */}
+                  <div className="px-4 py-3 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenGateResponsible(gate.id);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-[#0A3D36] font-black text-xs border border-amber-300 shadow-2xs hover:border-[#C59A27] active:scale-95 transition-all"
+                      title="Accéder à l'espace responsable de cette porte"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-[#C59A27]" />
+                      <span>Espace Responsable</span>
+                    </button>
 
-                    <span className="inline-flex items-center gap-1 text-[#0A3D36] font-black group-hover:translate-x-1 transition-transform">
-                      <span>Ouvrir la fenêtre</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectGate(gate.id, 'MEMBRES')}
+                      className="inline-flex items-center gap-1 text-[#0A3D36] font-black group-hover:translate-x-0.5 transition-transform"
+                    >
+                      <span className="text-xs">Ouvrir</span>
                       <ArrowRight className="w-3.5 h-3.5 text-[#C59A27]" />
-                    </span>
+                    </button>
                   </div>
                 </div>
               );
@@ -546,48 +597,225 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
               </div>
             </div>
 
-            {/* Sub-sectors explorer for this gate */}
-            <div className="p-5 space-y-3">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Filtrer par sous-secteur d'activité :
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedSubSector('ALL')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    selectedSubSector === 'ALL'
-                      ? 'bg-[#0A3D36] text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  Tous ({gateMembers.filter(m => m.gateId === activeGate.id).length})
-                </button>
-                {activeGate.keySubSectors.map((sector, idx) => {
-                  const countInSector = gateMembers.filter(
-                    m => m.gateId === activeGate.id && m.subSector === sector
-                  ).length;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedSubSector(sector)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        selectedSubSector === sector
-                          ? 'bg-[#0A3D36] text-white shadow-xs ring-1 ring-[#C59A27]'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <span>{sector}</span>
-                      {countInSector > 0 && (
-                        <span className="ml-1.5 text-[10px] opacity-75 font-semibold">({countInSector})</span>
-                      )}
-                    </button>
-                  );
-                })}
+            {/* GATE SUB-NAVIGATION TABS (MEMBRES / ESPACE RESPONSABLE / VISION) */}
+            <div className="bg-slate-100/90 p-2 border-b border-slate-200 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setGateSubTab('MEMBRES')}
+                className={`flex-1 min-w-[150px] py-2.5 px-3.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                  gateSubTab === 'MEMBRES'
+                    ? 'bg-[#0A3D36] text-white shadow-md'
+                    : 'bg-white hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Chrétiens d'Impact & Annuaire ({gateMembers.filter(m => m.gateId === activeGate.id).length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setGateSubTab('RESPONSABLE')}
+                className={`flex-1 min-w-[170px] py-2.5 px-3.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                  gateSubTab === 'RESPONSABLE'
+                    ? 'bg-[#C59A27] text-[#0A3D36] shadow-md ring-2 ring-[#0A3D36]'
+                    : 'bg-amber-50 hover:bg-amber-100 text-[#0A3D36] border border-amber-200 shadow-2xs'
+                }`}
+              >
+                <Shield className="w-4 h-4 text-[#0A3D36]" />
+                <span>Espace Responsable de la Porte</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/80 text-[#0A3D36] font-black">
+                  Pilote
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setGateSubTab('VISION')}
+                className={`flex-1 min-w-[140px] py-2.5 px-3.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                  gateSubTab === 'VISION'
+                    ? 'bg-[#0A3D36] text-white shadow-md'
+                    : 'bg-white hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Vision Apostolique & Sous-Secteurs</span>
+              </button>
+            </div>
+
+            {/* Sub-sectors explorer for this gate (Only shown in MEMBRES tab) */}
+            {gateSubTab === 'MEMBRES' && (
+              <div className="p-5 space-y-3">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Filtrer par sous-secteur d'activité :
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSubSector('ALL')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      selectedSubSector === 'ALL'
+                        ? 'bg-[#0A3D36] text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    Tous ({gateMembers.filter(m => m.gateId === activeGate.id).length})
+                  </button>
+                  {activeGate.keySubSectors.map((sector, idx) => {
+                    const countInSector = gateMembers.filter(
+                      m => m.gateId === activeGate.id && m.subSector === sector
+                    ).length;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedSubSector(sector)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          selectedSubSector === sector
+                            ? 'bg-[#0A3D36] text-white shadow-xs ring-1 ring-[#C59A27]'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        <span>{sector}</span>
+                        {countInSector > 0 && (
+                          <span className="ml-1.5 text-[10px] opacity-75 font-semibold">({countInSector})</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* TAB 1: ESPACE RESPONSABLE DE LA PORTE */}
+          {gateSubTab === 'RESPONSABLE' && (
+            <GateResponsibleSpace
+              gate={{
+                ...activeGate,
+                responsable: activeGate.responsable || GATE_RESPONSIBLES[activeGate.id]
+              }}
+              gateMembers={gateMembers}
+              currentUser={currentUser}
+              onOpenAuth={onOpenAuth}
+              onOpenAssistantWithPrompt={onOpenAssistantWithPrompt}
+            />
+          )}
+
+          {/* TAB 2: VISION APOSTOLIQUE & MANDAT */}
+          {gateSubTab === 'VISION' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full bg-[#0A3D36] text-[#F5DE98] text-xs font-black uppercase tracking-wider">
+                    Enseignement & Mandat Prophétique
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-[#0A3D36]">
+                    Transformer la sphère {activeGate.name} selon le Royaume de Dieu
+                  </h3>
+                  <p className="text-sm text-slate-600 leading-relaxed font-light">
+                    D'après le livre apostolique du <strong>Pasteur Mohammed Sanogo</strong> « <em>12 Portes d'Influence pour Transformer une Nation</em> ».
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-sm text-slate-700 italic leading-relaxed">
+                  « {activeGate.apostolicVision} »
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+                    <h4 className="font-black text-xs text-[#0A3D36] uppercase tracking-wider flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-[#C59A27]" />
+                      <span>Ancrage Scripturaire</span>
+                    </h4>
+                    <p className="text-xs text-slate-700 font-medium italic">
+                      {activeGate.scriptureReference}
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+                    <h4 className="font-black text-xs text-[#0A3D36] uppercase tracking-wider flex items-center gap-1.5">
+                      <Award className="w-4 h-4 text-[#C59A27]" />
+                      <span>Archétype Biblique de Référence</span>
+                    </h4>
+                    <p className="text-xs text-slate-700 font-medium">
+                      {activeGate.biblicalExample}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Subsectors breakdown */}
+                <div className="space-y-3 pt-2">
+                  <h4 className="font-black text-sm text-[#0A3D36] flex items-center gap-2">
+                    <Target className="w-4 h-4 text-[#C59A27]" />
+                    <span>Les 6 Sous-Secteurs Stratégiques d'Intervention :</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {activeGate.keySubSectors.map((sector, sIdx) => (
+                      <div
+                        key={sIdx}
+                        className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-1"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-black text-[#0A3D36]">
+                          <span className="w-5 h-5 rounded-md bg-amber-100 text-[#0A3D36] flex items-center justify-center text-[10px]">
+                            {sIdx + 1}
+                          </span>
+                          <span>{sector}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 pl-7">
+                          Sphère opérationnelle pour les chrétiens compétents et intègres.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Suggested Roles */}
+                {activeGate.suggestedRoles && activeGate.suggestedRoles.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <h4 className="font-black text-sm text-[#0A3D36] flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-[#C59A27]" />
+                      <span>Métiers & Profils Attendus dans cette Porte :</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {activeGate.suggestedRoles.map((role, rIdx) => (
+                        <span
+                          key={rIdx}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200"
+                        >
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action CTA */}
+                <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGateSubTab('RESPONSABLE')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#C59A27] hover:bg-[#D4A936] text-[#0A3D36] font-black text-xs shadow-md transition-all active:scale-95"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>Accéder à l'Espace Responsable</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenAssistantWithPrompt(`Explique-moi comment manifester la royauté de Christ et l'intégrité dans la porte d'influence ${activeGate.name}.`)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#C59A27]" />
+                    <span>Enseignement approfondi IA</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* TAB 3: CHRETIENS D'IMPACT & ANNUAIRE (Existing Members list) */}
+          {gateSubTab === 'MEMBRES' && (
+            <div className="space-y-4">
 
           {/* Search & Filter Bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row gap-3 items-center justify-between">
@@ -806,6 +1034,8 @@ export const InfluenceGatesView: React.FC<InfluenceGatesViewProps> = ({
           </div>
         </div>
       )}
+    </div>
+  )}
 
       {/* Profile Registration Modal */}
       {isRegisterModalOpen && (

@@ -46,6 +46,7 @@ import { RapportDetailModal } from './RapportDetailModal';
 import { RapportSpecialModal } from './RapportSpecialModal';
 import { CultePresencesManager } from './CultePresencesManager';
 import { PastorMembersDirectory } from './PastorMembersDirectory';
+import { PastorLeadershipManager } from './PastorLeadershipManager';
 
 interface PastorSpaceViewProps {
   currentUser: UserProfile | null;
@@ -57,7 +58,7 @@ interface PastorSpaceViewProps {
   tribes?: TribeInfo[];
   tribeMembers?: TribeMember[];
   initialRapportFormId?: string;
-  initialPastorTab?: 'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres';
+  initialPastorTab?: 'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres' | 'responsables';
   onAddCulte: (culte: CulteResume) => void;
   onAddTemplate: (template: RapportTemplate) => void;
   onAddRapport: (rapport: RapportSoumis) => void;
@@ -90,7 +91,7 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
 }) => {
   // Navigation tabs in pastor space
   const [activePastorTab, setActivePastorTab] = useState<
-    'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres'
+    'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres' | 'responsables'
   >(initialPastorTab);
 
   // Modals
@@ -109,10 +110,12 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
   const [copiedResumeId, setCopiedResumeId] = useState<string | null>(null);
   const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
 
-  // Auto open submit modal if directed via direct link
+  // Auto open submit modal or specific submitted report if directed via direct link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const formId = initialRapportFormId || params.get('rapportForm');
+    const viewReportId = params.get('viewRapportId');
+
     if (formId && templates.length > 0) {
       const target = templates.find(t => t.id === formId);
       if (target) {
@@ -120,7 +123,15 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
         setShowSubmitModal(true);
       }
     }
-  }, [initialRapportFormId, templates]);
+
+    if (viewReportId && rapports.length > 0) {
+      const targetReport = rapports.find(r => r.id === viewReportId);
+      if (targetReport) {
+        setSelectedRapportForDetail(targetReport);
+        setActivePastorTab('inbox');
+      }
+    }
+  }, [initialRapportFormId, templates, rapports]);
 
   const handleShareTemplateWhatsApp = (template: RapportTemplate) => {
     const formUrl = `${window.location.origin}${window.location.pathname}?tab=pastor&rapportForm=${template.id}`;
@@ -267,6 +278,14 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
               <Sparkles className="w-4 h-4 text-emerald-200" />
               <span>Générer le Spécial & Partager</span>
             </button>
+
+            <button
+              onClick={() => setActivePastorTab('responsables')}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-[#E5B22F] hover:from-amber-500 hover:to-[#cda028] text-slate-950 text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
+            >
+              <Shield className="w-4 h-4 text-slate-950" />
+              <span>Gouvernance & Codes Responsables</span>
+            </button>
           </div>
         </div>
 
@@ -358,6 +377,18 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
               </span>
             )}
           </button>
+
+          <button
+            onClick={() => setActivePastorTab('responsables')}
+            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+              activePastorTab === 'responsables'
+                ? 'bg-white text-[#0A3D36] shadow-sm'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+          >
+            <Shield className="w-4 h-4 text-[#E5B22F]" />
+            <span>Nomination & Codes des Responsables</span>
+          </button>
         </div>
       </div>
 
@@ -439,7 +470,7 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
               <Inbox className="w-12 h-12 text-slate-300 mx-auto" />
               <h4 className="font-bold text-slate-700 text-sm">Aucun rapport dans cette vue</h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Les rapports soumis par les membres et responsables de cellules apparaîtront directement ici.
+                Les rapports soumis par les membres, Bergers, chefs de tribus et responsables de départements apparaîtront directement ici.
               </p>
             </div>
           ) : (
@@ -1031,6 +1062,13 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
           presences={presences}
           currentUser={currentUser}
           onAddPresence={onAddPresence}
+        />
+      )}
+
+      {/* ONGLET G : GOUVERNANCE, NOMINATION & CODES DES RESPONSABLES */}
+      {activePastorTab === 'responsables' && (
+        <PastorLeadershipManager
+          onBackToOverview={() => setActivePastorTab('inbox')}
         />
       )}
 
