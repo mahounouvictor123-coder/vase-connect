@@ -59,6 +59,7 @@ import { updateGateResponsible } from '../data/gateLeadershipData';
 export interface RegisterAffiliationData {
   tribeId: TribeId;
   departmentId: string;
+  departmentIds?: string[];
   detectedGateId: InfluenceGateId;
   familleHonneurId?: string;
 }
@@ -134,9 +135,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [showGateSelector, setShowGateSelector] = useState(false);
   const [regTribeId, setRegTribeId] = useState<TribeId>('juda');
   const [regDepartmentId, setRegDepartmentId] = useState<string>('communication');
+  const [regDepartmentIds, setRegDepartmentIds] = useState<string[]>([
+    departments[0]?.id || 'communication',
+    departments[1]?.id || 'jeunesse',
+  ]);
   const [regQuartier, setRegQuartier] = useState('Fidjrossè Plage / Akogbato');
   const [customQuartier, setCustomQuartier] = useState('');
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
+
+  // Toggle département : autorise entre 2 et 3 départements
+  const toggleDepartment = (deptId: string) => {
+    setErrorMessage('');
+    if (regDepartmentIds.includes(deptId)) {
+      if (regDepartmentIds.length <= 2) {
+        setErrorMessage('Vous devez choisir au minimum 2 départements de service.');
+        return;
+      }
+      setRegDepartmentIds(prev => prev.filter(id => id !== deptId));
+    } else {
+      if (regDepartmentIds.length >= 3) {
+        setErrorMessage('Vous pouvez choisir au maximum 3 départements de service.');
+        return;
+      }
+      setRegDepartmentIds(prev => [...prev, deptId]);
+    }
+  };
 
   // ==========================================
   // LOGIN FORM STATES
@@ -184,6 +207,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const selectedDeptInfo = useMemo(() => {
     return departments.find(d => d.id === regDepartmentId) || departments[0];
   }, [regDepartmentId, departments]);
+
+  const selectedDeptInfos = useMemo(() => {
+    return departments.filter(d => regDepartmentIds.includes(d.id));
+  }, [regDepartmentIds, departments]);
 
   if (!isOpen) return null;
 
@@ -396,12 +423,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setErrorMessage('Veuillez indiquer votre profession ou domaine d’activité.');
       return;
     }
+    if (regDepartmentIds.length < 2 || regDepartmentIds.length > 3) {
+      setErrorMessage(`Veuillez choisir entre 2 et 3 départements de service (actuellement : ${regDepartmentIds.length}).`);
+      return;
+    }
 
     setIsSubmittingReg(true);
 
     setTimeout(() => {
       const generatedId = 'usr-reg-' + Date.now();
       const finalQuartier = effectiveQuartierText.trim() || 'Cotonou';
+      
+      const chosenDeptNames = departments
+        .filter(d => regDepartmentIds.includes(d.id))
+        .map(d => d.name);
+      const primaryDeptName = chosenDeptNames[0] || 'Département';
+      const primaryDeptId = regDepartmentIds[0] || 'communication';
 
       const newUser: UserProfile = {
         id: generatedId,
@@ -419,9 +456,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         city: 'Cotonou',
         country: 'Bénin',
         skills: [regProfession.trim(), 'Vie de l’Église', 'Engagement'],
-        activities: [selectedDeptInfo?.name || 'Département', `Tribu de ${selectedTribeInfo?.name || 'Juda'}`],
-        departmentId: regDepartmentId,
-        departmentName: selectedDeptInfo?.name || 'Département',
+        activities: [...chosenDeptNames, `Tribu de ${selectedTribeInfo?.name || 'Juda'}`],
+        departmentId: primaryDeptId,
+        departmentName: chosenDeptNames.join(', '),
+        departmentIds: regDepartmentIds,
+        departmentNames: chosenDeptNames,
         availableForOpportunities: true,
         availableForMissions: true,
         status: 'DISPONIBLE',
@@ -460,7 +499,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       const affiliation: RegisterAffiliationData = {
         tribeId: regTribeId,
-        departmentId: regDepartmentId,
+        departmentId: primaryDeptId,
+        departmentIds: regDepartmentIds,
         detectedGateId: effectiveGateId,
         familleHonneurId: matchedFamille?.id,
       };
@@ -1239,14 +1279,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 )}
 
                 {/* ==================================================== */}
-                {/* FORMULAIRE C : MEMBRE STANDARD (Automatisé) */}
+                {/* FORMULAIRE C : MEMBRE STANDARD (Automatisé avec 2 à 3 Départements) */}
                 {/* ==================================================== */}
                 {regRole === 'MEMBRE' && (
                   <form onSubmit={handleRegisterSubmit} className="space-y-4 animate-in fade-in">
+                    {/* Bannière Détection d'Invitation Fraternelle */}
+                    {typeof window !== 'undefined' && (window.location.search.includes('invite') || window.location.search.includes('invited') || window.location.search.includes('invitation') || window.location.hash.toLowerCase().includes('invite')) && (
+                      <div className="bg-gradient-to-r from-[#0A3D36] via-[#104C43] to-[#0A3D36] text-white p-3.5 rounded-2xl border border-[#C59A27]/40 shadow-sm flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#C59A27]/20 border border-[#C59A27]/50 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-4 h-4 text-[#E5B22F]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black uppercase text-[#E5B22F] tracking-wide block">
+                            🕊️ Invitation Fraternelle Reçue
+                          </span>
+                          <p className="text-xs text-emerald-100 font-semibold leading-tight">
+                            Bienvenue ! Votre fiche d'inscription active instantanément vos 4 affectations (Tribu, 2 à 3 Départements, Porte d'Influence et Quartier).
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-gradient-to-r from-[#0A3D36]/10 via-[#C59A27]/10 to-emerald-50 p-3 rounded-2xl border border-[#0A3D36]/15 flex items-center gap-2.5">
                       <Sparkles className="w-5 h-5 text-[#C59A27] shrink-0" />
                       <p className="text-slate-700 text-[11px] leading-relaxed">
-                        <strong>Rattachement automatique instantané :</strong> En renseignant votre profil, la plateforme vous ajoute immédiatement à votre <strong>Porte d'Influence</strong>, votre <strong>Tribu</strong>, votre <strong>Département</strong> et votre <strong>Famille d'Honneur de proximité</strong>.
+                        <strong>Rattachement automatique instantané :</strong> En renseignant votre profil, vous êtes immédiatement intégré(e) à votre <strong>Tribu</strong>, vos <strong>2 à 3 Départements de service</strong>, votre <strong>Porte d'Influence</strong> et votre <strong>Famille d'Honneur de quartier</strong>.
                       </p>
                     </div>
 
@@ -1320,7 +1377,119 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       </div>
                     </div>
 
-                    {/* 3. PROFESSION / DOMAINE D'ACTIVITÉ + DÉTECTION AUTOMATIQUE DE LA PORTE */}
+                    {/* 3. TRIBU SPIRITUELLE (TRIBUT) */}
+                    <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <Crown className="w-4 h-4 text-[#C59A27]" />
+                          <span>Votre Tribu d’appartenance <span className="text-rose-500">*</span></span>
+                        </label>
+                        <span className="text-[10px] text-amber-900 font-bold bg-amber-100 px-2 py-0.5 rounded-full">
+                          12 Tribus d'Israël
+                        </span>
+                      </div>
+                      <select
+                        value={regTribeId}
+                        onChange={(e) => setRegTribeId(e.target.value as TribeId)}
+                        className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#0A3D36]"
+                      >
+                        {tribes.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            Tribu de {t.name} — Symbole : {t.symbol}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedTribeInfo && (
+                        <p className="text-[11px] text-slate-600 bg-white/70 p-2 rounded-xl border border-amber-200/60 italic">
+                          🦁 <strong>Bénédiction biblique :</strong> {selectedTribeInfo.biblicalMeaning}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 4. DÉPARTEMENTS DU MINISTÈRE (CHOIX DE 2 À 3 DÉPARTEMENTS) */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <Church className="w-4 h-4 text-[#0A3D36]" />
+                            <span>Départements de service du Ministère <span className="text-rose-500">*</span></span>
+                          </label>
+                          <p className="text-[11px] text-slate-500">
+                            Vous pouvez choisir <strong>2 à 3 départements</strong> d'engagement :
+                          </p>
+                        </div>
+
+                        {/* Compteur interactif */}
+                        <div
+                          className={`px-3 py-1 rounded-full text-[11px] font-black flex items-center gap-1.5 ${
+                            regDepartmentIds.length < 2
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : regDepartmentIds.length === 2
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-[#C59A27]/20 text-[#0A3D36] border border-[#C59A27]/40'
+                          }`}
+                        >
+                          <span>{regDepartmentIds.length} / 3 choisis</span>
+                          {regDepartmentIds.length >= 2 && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                      </div>
+
+                      {/* Grille multi-sélection */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        {departments.map((dept) => {
+                          const isSelected = regDepartmentIds.includes(dept.id);
+                          const orderIndex = regDepartmentIds.indexOf(dept.id);
+                          return (
+                            <button
+                              key={dept.id}
+                              type="button"
+                              onClick={() => toggleDepartment(dept.id)}
+                              className={`p-2.5 rounded-xl border text-left flex items-start justify-between gap-2 transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#0A3D36]/10 border-[#0A3D36] shadow-xs'
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div
+                                  className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black transition-colors ${
+                                    isSelected
+                                      ? 'bg-[#0A3D36] text-[#C59A27]'
+                                      : 'border border-slate-300 text-transparent bg-white'
+                                  }`}
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </div>
+                                <div>
+                                  <span
+                                    className={`font-bold block text-xs ${
+                                      isSelected ? 'text-[#0A3D36]' : 'text-slate-700'
+                                    }`}
+                                  >
+                                    {dept.name}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 line-clamp-1">
+                                    {dept.description || 'Département de service'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-[#0A3D36] text-white shrink-0">
+                                  #{orderIndex + 1}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-[10px] text-slate-500 italic">
+                        Vous serez rattaché(e) aux serviteurs actifs dans ces {regDepartmentIds.length} départements.
+                      </p>
+                    </div>
+
+                    {/* 5. PROFESSION & PORTE D'INFLUENCE DANS LA CITÉ */}
                     <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1330,7 +1499,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setShowGateSelector(!showGateSelector)}
-                          className="text-[10px] text-[#0A3D36] font-bold hover:underline"
+                          className="text-[10px] text-[#0A3D36] font-bold hover:underline cursor-pointer"
                         >
                           {showGateSelector ? 'Masquer sélecteur manuel' : 'Changer manuellement la porte ?'}
                         </button>
@@ -1343,7 +1512,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         value={regProfession}
                         onChange={(e) => {
                           setRegProfession(e.target.value);
-                          if (customGateId) setCustomGateId(''); // Reset manual override on typing
+                          if (customGateId) setCustomGateId('');
                         }}
                         placeholder="Ex: Développeur Web, Médecin, Comptable, Enseignant, Avocat..."
                         className="w-full px-3 py-2 bg-white rounded-xl border border-amber-300/80 text-xs font-semibold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#0A3D36]"
@@ -1396,54 +1565,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       )}
                     </div>
 
-                    {/* 4. TRIBU & DÉPARTEMENT */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* TRIBU */}
-                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                        <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <Crown className="w-3.5 h-3.5 text-[#C59A27]" />
-                          <span>Votre Tribu d’appartenance <span className="text-rose-500">*</span></span>
-                        </label>
-                        <select
-                          value={regTribeId}
-                          onChange={(e) => setRegTribeId(e.target.value as TribeId)}
-                          className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#0A3D36]"
-                        >
-                          {tribes.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              Tribu de {t.name} — {t.symbol}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[10px] text-slate-500 italic">
-                          {selectedTribeInfo?.biblicalMeaning}
-                        </p>
-                      </div>
-
-                      {/* DÉPARTEMENT */}
-                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                        <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <Church className="w-3.5 h-3.5 text-[#0A3D36]" />
-                          <span>Département de service <span className="text-rose-500">*</span></span>
-                        </label>
-                        <select
-                          value={regDepartmentId}
-                          onChange={(e) => setRegDepartmentId(e.target.value)}
-                          className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#0A3D36]"
-                        >
-                          {departments.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[10px] text-slate-500">
-                          Vous serez ajouté à la liste des serviteurs actifs de ce département.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* 5. QUARTIER & RATTACHEMENT AUTOMATIQUE À LA FAMILLE D'HONNEUR */}
+                    {/* 6. QUARTIER & RATTACHEMENT AUTOMATIQUE À LA FAMILLE D'HONNEUR */}
                     <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <label className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1502,7 +1624,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       )}
                     </div>
 
-                    {/* 6. VALIDATION MEMBRE */}
+                    {/* VALIDATION MEMBRE */}
                     <div className="pt-2">
                       <button
                         type="submit"
@@ -1511,13 +1633,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       >
                         <span>
                           {isSubmittingReg
-                            ? 'Enregistrement des 4 affectations...'
-                            : 'Valider mon Inscription & Mes 4 Affectations'}
+                            ? 'Enregistrement de vos 4 affectations...'
+                            : 'Valider mon Inscription & Mes Affectations'}
                         </span>
                         <ArrowRight className="w-4 h-4 text-[#C59A27]" />
                       </button>
                       <p className="text-[10px] text-center text-slate-400 mt-2">
-                        En validant, votre profil est instantanément synchronisé dans votre tribu, département et famille d'honneur.
+                        En validant, votre profil est instantanément synchronisé dans votre tribu, vos 2 à 3 départements et votre famille d'honneur.
                       </p>
                     </div>
                   </form>

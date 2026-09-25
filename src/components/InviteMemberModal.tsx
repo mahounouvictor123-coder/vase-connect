@@ -16,22 +16,28 @@ interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser?: UserProfile | null;
+  onPreviewInvite?: () => void;
 }
 
 export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   isOpen,
   onClose,
   currentUser,
+  onPreviewInvite,
 }) => {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
-  const inviteUrl = `${window.location.origin}/?invite=true`;
+  const inviteUrl = `${window.location.origin}/?invite=membre`;
 
-  const shareText = `🕊️ *INVITATION VASES CONNECT — ÉGLISE VASES D'HONNEUR*\n\nShalom bien-aimé(e) !\n${
-    currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Un frère / une sœur'
-  } vous invite chaleureusement à rejoindre *Vases Connect*, la plateforme officielle de notre église.\n\n👉 *Cliquez sur ce lien d'invitation pour vous connecter avec votre compte Gmail :*\n${inviteUrl}\n\nUne fois connecté(e), vous pourrez retrouver votre Tribu, vos frères et sœurs, et pointer facilement votre présence aux cultes du dimanche ! Que le Seigneur vous bénisse abondamment.`;
+  const inviterTitle = currentUser?.role === 'PASTEUR'
+    ? 'Le Pasteur Mohammed Sanogo'
+    : currentUser
+    ? `${currentUser.firstName} ${currentUser.lastName}`
+    : 'La communauté pastorale';
+
+  const shareText = `🕊️ *INVITATION OFFICIELLE — ÉGLISE VASES D'HONNEUR*\n\nShalom bien-aimé(e) !\n${inviterTitle} vous adresse une chaleureuse invitation fraternelle à rejoindre *Vases Connect*, la plateforme officielle de notre communauté.\n\n👉 *Cliquez sur ce lien d'invitation pour vous inscrire :*\n${inviteUrl}\n\nEn ouvrant ce lien, vous serez accueilli(e) avec votre carte d'invitation officielle pour renseigner :\n✨ Nom & Prénom\n✨ Votre Tribu spirituelle\n✨ Vos 2 à 3 Départements de service\n✨ Votre Numéro de téléphone WhatsApp\n✨ Votre Porte d'Influence royale dans la cité\n✨ Votre Quartier (Famille d'Honneur de proximité)\n\nQue le Seigneur vous bénisse abondamment !`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(inviteUrl);
@@ -65,7 +71,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
           </h3>
 
           <p className="text-xs text-emerald-100/90 mt-1">
-            Partagez le lien officiel d'accueil. Le membre le recevra en tant qu'invité et se connectera d'abord avec son compte Gmail.
+            Partagez le lien d'invitation officielle. Le membre le recevra comme une invitation fraternelle personnalisée avec formulaire d'affectation immédiate.
           </p>
         </div>
 
@@ -73,7 +79,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         <div className="p-6 space-y-4">
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Lien direct d'invitation (Mode Invité)
+              Lien direct d'invitation fraternelle
             </span>
             <div className="flex items-center gap-2">
               <input
@@ -85,33 +91,49 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
+                className="px-3 py-2 bg-[#0A3D36] hover:bg-[#072a25] text-white rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition-colors"
               >
-                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                <span>{copied ? 'Copié' : 'Copier'}</span>
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                <span>{copied ? 'Copié !' : 'Copier'}</span>
               </button>
             </div>
           </div>
 
-          <div className="bg-amber-50/70 border border-amber-200/70 rounded-2xl p-3 text-xs text-amber-900 space-y-1">
+          <div className="bg-amber-50/70 border border-amber-200/70 rounded-2xl p-3.5 text-xs text-amber-900 space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold text-amber-950">
               <Shield className="w-3.5 h-3.5 text-[#C59A27]" />
-              <span>Accès Membre Sécurisé</span>
+              <span>Champs d'Inscription Prévus pour le Membre</span>
             </div>
-            <p className="text-[11px] text-slate-600">
-              Le membre invité aura le rôle Membre. Il n'aura aucun accès à l'espace confidentiel du Pasteur.
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              En ouvrant ce lien, le membre renseigne : <strong>Nom & Prénom</strong>, <strong>Tribu</strong>, <strong>2 à 3 Départements au choix</strong>, <strong>Téléphone WhatsApp</strong>, <strong>Porte d'Influence</strong> et <strong>Quartier</strong>.
             </p>
           </div>
 
-          {/* Bouton de Partage WhatsApp direct */}
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-101 active:scale-98"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Envoyer l'invitation sur WhatsApp</span>
-          </button>
+          {/* Boutons d'Action */}
+          <div className="space-y-2 pt-1">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-101 active:scale-98 cursor-pointer"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Envoyer l'invitation sur WhatsApp</span>
+            </button>
+
+            {onPreviewInvite && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onPreviewInvite();
+                }}
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-[#C59A27]" />
+                <span>Tester & Prévisualiser ce que voit le membre invité</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

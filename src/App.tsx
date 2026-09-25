@@ -365,8 +365,10 @@ export default function App() {
       const isInviteParam =
         searchParams.get('invite') !== null ||
         searchParams.get('invited') !== null ||
+        searchParams.get('invitation') !== null ||
         searchParams.get('join') !== null ||
-        searchParams.get('ref') !== null;
+        searchParams.get('ref') !== null ||
+        (typeof window !== 'undefined' && window.location.hash.toLowerCase().includes('invite'));
 
       if (isInviteParam) {
         setIsInviteWelcomeModalOpen(true);
@@ -670,6 +672,7 @@ export default function App() {
     affiliation: {
       tribeId: TribeId;
       departmentId: string;
+      departmentIds?: string[];
       detectedGateId: InfluenceGateId;
       familleHonneurId?: string;
     }
@@ -692,22 +695,28 @@ export default function App() {
     };
     handleSaveTribeMember(newTribeMember, false);
 
-    // 3. Rattachement automatique au Département choisi
-    const dept = departments.find(d => d.id === affiliation.departmentId);
-    const newDeptMember: DepartmentMember = {
-      id: 'dep-m-' + user.id,
-      departmentId: affiliation.departmentId,
-      memberId: user.id,
-      nom: user.lastName,
-      prenom: user.firstName,
-      telephone: user.phone,
-      email: user.email,
-      roleInDepartment: 'Membre Actif',
-      dateAdhesion: new Date().toISOString().split('T')[0],
-      competences: user.skills && user.skills.length > 0 ? user.skills : [user.profession],
-      photoUrl: user.photoUrl,
-    };
-    handleAddMemberToDepartment(affiliation.departmentId, newDeptMember);
+    // 3. Rattachement automatique aux 2 à 3 Départements choisis
+    const targetDeptIds = affiliation.departmentIds && affiliation.departmentIds.length > 0
+      ? affiliation.departmentIds
+      : [affiliation.departmentId];
+
+    targetDeptIds.forEach((deptId, idx) => {
+      const dept = departments.find(d => d.id === deptId);
+      const newDeptMember: DepartmentMember = {
+        id: 'dep-m-' + user.id + '-' + deptId,
+        departmentId: deptId,
+        memberId: user.id,
+        nom: user.lastName,
+        prenom: user.firstName,
+        telephone: user.phone,
+        email: user.email,
+        roleInDepartment: idx === 0 ? 'Membre Actif (Principal)' : 'Membre Actif',
+        dateAdhesion: new Date().toISOString().split('T')[0],
+        competences: user.skills && user.skills.length > 0 ? user.skills : [user.profession],
+        photoUrl: user.photoUrl,
+      };
+      handleAddMemberToDepartment(deptId, newDeptMember);
+    });
 
     // 4. Rattachement automatique à la Porte d'Influence correspondante
     const gate = INFLUENCE_GATES.find(g => g.id === affiliation.detectedGateId);
@@ -906,6 +915,7 @@ export default function App() {
               tribes={tribes}
               tribeMembers={tribeMembers}
               initialRapportFormId={targetRapportFormId}
+              onOpenInvite={() => setIsInviteModalOpen(true)}
               onAddCulte={handleAddCulte}
               onAddTemplate={handleAddTemplate}
               onAddRapport={handleAddRapport}
@@ -1152,6 +1162,7 @@ export default function App() {
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         currentUser={currentUser}
+        onPreviewInvite={() => setIsInviteWelcomeModalOpen(true)}
       />
 
       {/* Invite Welcome Modal for Members Arriving via Link */}

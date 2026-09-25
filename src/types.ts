@@ -20,6 +20,8 @@ export interface UserProfile {
   activities: string[]; // e.g. "Vente informatique", "Développement web", "Couture"
   departmentId: string; // e.g. "jeunesse", "chorale", "hommes", "femmes", "media"
   departmentName: string;
+  departmentIds?: string[]; // IDs des 2 à 3 départements choisis
+  departmentNames?: string[]; // Noms des 2 à 3 départements choisis
   availableForOpportunities: boolean;
   availableForMissions: boolean;
   status: AvailabilityStatus;

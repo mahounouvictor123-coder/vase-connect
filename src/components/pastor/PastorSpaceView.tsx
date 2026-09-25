@@ -27,6 +27,7 @@ import {
   Link2,
   ExternalLink,
   UserCheck,
+  UserPlus,
 } from 'lucide-react';
 import {
   CulteResume,
@@ -67,6 +68,7 @@ interface PastorSpaceViewProps {
   onAddPresence?: (presence: CultePresenceRecord) => Promise<void> | void;
   onDeletePresence?: (id: string) => Promise<void> | void;
   onOpenPublicLink?: (date: string, culte: CulteServiceType) => void;
+  onOpenInvite?: () => void;
 }
 
 export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
@@ -88,6 +90,7 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
   onAddPresence,
   onDeletePresence,
   onOpenPublicLink,
+  onOpenInvite,
 }) => {
   // Navigation tabs in pastor space
   const [activePastorTab, setActivePastorTab] = useState<
@@ -286,6 +289,16 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
               <Shield className="w-4 h-4 text-slate-950" />
               <span>Gouvernance & Codes Responsables</span>
             </button>
+
+            {onOpenInvite && (
+              <button
+                onClick={onOpenInvite}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
+              >
+                <UserPlus className="w-4 h-4 text-[#E5B22F]" />
+                <span>Inviter un Membre (Lien & WhatsApp)</span>
+              </button>
+            )}
           </div>
         </div>
 
