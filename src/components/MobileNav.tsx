@@ -1,16 +1,19 @@
 import React from 'react';
-import { Home, Users2, Sparkles, ShoppingBag, User } from 'lucide-react';
+import { Home, Users2, Sparkles, ShoppingBag, User, Shield, Calendar, Heart, Crown } from 'lucide-react';
+import { PastorDelegation } from '../types';
 
 interface MobileNavProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
   onOpenAssistant?: () => void;
+  activeDelegation?: PastorDelegation | null;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
   activeTab,
   onSelectTab,
   onOpenAssistant,
+  activeDelegation,
 }) => {
   const handleAssistant = () => {
     if (onOpenAssistant) {
@@ -19,6 +22,56 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       onSelectTab('assistant');
     }
   };
+
+  // If a delegation is active, customize mobile items based on authorized portions
+  if (activeDelegation) {
+    const authorized = activeDelegation.ongletsAutorises;
+
+    return (
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-[#C59A27]/60 px-2 py-1 shadow-2xl">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {authorized.slice(0, 5).map((tabId) => {
+            const isCurrent = activeTab === tabId;
+            let Icon = Shield;
+            let label = tabId;
+
+            if (tabId === 'accueil') {
+              Icon = Home;
+              label = 'Accueil';
+            } else if (tabId === 'presence_culte') {
+              Icon = Calendar;
+              label = 'Présences';
+            } else if (tabId === 'coeur_honneur') {
+              Icon = Heart;
+              label = 'Cœur d’Honneur';
+            } else if (tabId === 'tribus') {
+              Icon = Crown;
+              label = 'Tribus';
+            } else if (tabId === 'membres') {
+              Icon = Users2;
+              label = 'Membres';
+            } else if (tabId === 'pastor') {
+              Icon = Shield;
+              label = 'Délégué';
+            }
+
+            return (
+              <button
+                key={tabId}
+                onClick={() => onSelectTab(tabId)}
+                className={`flex flex-col items-center py-1.5 px-2 transition-colors ${
+                  isCurrent ? 'text-[#0A3D36] font-black' : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isCurrent ? 'text-[#C59A27]' : ''}`} />
+                <span className="text-[10px] mt-0.5 truncate max-w-[65px]">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-2 py-1 shadow-2xl">

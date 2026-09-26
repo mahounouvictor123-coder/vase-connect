@@ -28,6 +28,8 @@ import {
   ExternalLink,
   UserCheck,
   UserPlus,
+  KeyRound,
+  Lock,
 } from 'lucide-react';
 import {
   CulteResume,
@@ -48,6 +50,8 @@ import { RapportSpecialModal } from './RapportSpecialModal';
 import { CultePresencesManager } from './CultePresencesManager';
 import { PastorMembersDirectory } from './PastorMembersDirectory';
 import { PastorLeadershipManager } from './PastorLeadershipManager';
+import { PastorCloisonnementManager } from './PastorCloisonnementManager';
+import { PastorDelegation } from '../../types';
 
 interface PastorSpaceViewProps {
   currentUser: UserProfile | null;
@@ -59,7 +63,8 @@ interface PastorSpaceViewProps {
   tribes?: TribeInfo[];
   tribeMembers?: TribeMember[];
   initialRapportFormId?: string;
-  initialPastorTab?: 'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres' | 'responsables';
+  initialPastorTab?: 'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres' | 'responsables' | 'cloisonnement';
+  activeDelegation?: PastorDelegation | null;
   onAddCulte: (culte: CulteResume) => void;
   onAddTemplate: (template: RapportTemplate) => void;
   onAddRapport: (rapport: RapportSoumis) => void;
@@ -69,6 +74,7 @@ interface PastorSpaceViewProps {
   onDeletePresence?: (id: string) => Promise<void> | void;
   onOpenPublicLink?: (date: string, culte: CulteServiceType) => void;
   onOpenInvite?: () => void;
+  onTestDelegation?: (delegation: PastorDelegation) => void;
 }
 
 export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
@@ -82,6 +88,7 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
   tribeMembers = [],
   initialRapportFormId,
   initialPastorTab = 'inbox',
+  activeDelegation,
   onAddCulte,
   onAddTemplate,
   onAddRapport,
@@ -91,11 +98,35 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
   onDeletePresence,
   onOpenPublicLink,
   onOpenInvite,
-}) => {
+  onTestDelegation,
+}: PastorSpaceViewProps) => {
+  // Compartmentalized authorized portions
+  const authorizedPastorPortions =
+    activeDelegation && activeDelegation.portionsPastoralesAutorisees.length > 0
+      ? activeDelegation.portionsPastoralesAutorisees
+      : [
+          'inbox',
+          'cultes',
+          'templates',
+          'speciaux',
+          'presences',
+          'membres',
+          'responsables',
+          'cloisonnement',
+        ];
+
   // Navigation tabs in pastor space
   const [activePastorTab, setActivePastorTab] = useState<
-    'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres' | 'responsables'
-  >(initialPastorTab);
+    'inbox' | 'cultes' | 'templates' | 'speciaux' | 'presences' | 'membres' | 'responsables' | 'cloisonnement'
+  >(() => {
+    if (activeDelegation && activeDelegation.portionsPastoralesAutorisees.length > 0) {
+      if (initialPastorTab && (activeDelegation.portionsPastoralesAutorisees as string[]).includes(initialPastorTab)) {
+        return initialPastorTab;
+      }
+      return activeDelegation.portionsPastoralesAutorisees[0] as any;
+    }
+    return initialPastorTab;
+  });
 
   // Modals
   const [showCulteModal, setShowCulteModal] = useState(false);
@@ -137,13 +168,13 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
   }, [initialRapportFormId, templates, rapports]);
 
   const handleShareTemplateWhatsApp = (template: RapportTemplate) => {
-    const formUrl = `${window.location.origin}${window.location.pathname}?tab=pastor&rapportForm=${template.id}`;
+    const formUrl = `${window.location.origin}${window.location.pathname}?rapportForm=${template.id}`;
     const message = `🕊️ *VASES D'HONNEUR — DIRECTION PASTORALE*\n\nBien-aimé(e) Responsable,\nLe Pasteur vous invite à renseigner et soumettre directement votre rapport : *${template.titre}* sur la plateforme Vases Connect.\n\n📝 *Lien direct du formulaire à remplir en ligne :*\n${formUrl}\n\nVos réponses et statistiques remonteront instantanément dans la boîte pastorale. Que Dieu bénisse votre ministère !`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleCopyTemplateLink = (template: RapportTemplate) => {
-    const formUrl = `${window.location.origin}${window.location.pathname}?tab=pastor&rapportForm=${template.id}`;
+    const formUrl = `${window.location.origin}${window.location.pathname}?rapportForm=${template.id}`;
     navigator.clipboard.writeText(formUrl);
     setCopiedTemplateId(template.id);
     setTimeout(() => setCopiedTemplateId(null), 3000);
@@ -236,59 +267,96 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/50 text-[#E5B22F] text-xs font-black uppercase tracking-wider">
-              <Crown className="w-3.5 h-3.5" />
-              <span>Chaire & Bureau Pastoral • Vases d'Honneur</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Espace Pastoral & Gouvernance
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Supervision apostolique du troupeau : consultez les comptes-rendus des cultes, définissez les fenêtres de rapports des 12 Tribus, Départements et Familles d'Honneur, recevez les retours des membres dans votre boîte pastorale et générez les synthèses spéciales pour le partage.
-            </p>
+            {activeDelegation ? (
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/50 text-[#E5B22F] text-xs font-black uppercase tracking-wider">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Mission Pastorale Déléguée • Code {activeDelegation.codeAccesCourt}</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {activeDelegation.titreRole}
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Portion confiée par la Chaire Pastorale à <strong>{activeDelegation.nomBeneficiaire}</strong>. Seules vos sections autorisées ({authorizedPastorPortions.length} portions) sont déverrouillées pour accomplir fidèlement votre service.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C59A27]/20 border border-[#C59A27]/50 text-[#E5B22F] text-xs font-black uppercase tracking-wider">
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Chaire & Bureau Pastoral • Vases d'Honneur</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  Espace Pastoral & Gouvernance
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Supervision apostolique du troupeau : consultez les comptes-rendus des cultes, définissez les fenêtres de rapports des 12 Tribus, Départements et Familles d'Honneur, recevez les retours des membres dans votre boîte pastorale et générez les synthèses spéciales pour le partage.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Boutons d'Action Rapide Demandés */}
           <div className="flex flex-wrap sm:flex-col gap-2.5 shrink-0">
-            <button
-              onClick={() => setActivePastorTab('presences')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
-            >
-              <UserCheck className="w-4 h-4 text-[#E5B22F]" />
-              <span>Présences Dimanche & Liens</span>
-            </button>
+            {authorizedPastorPortions.includes('presences') && (
+              <button
+                onClick={() => setActivePastorTab('presences')}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
+              >
+                <UserCheck className="w-4 h-4 text-[#E5B22F]" />
+                <span>Présences Dimanche & Liens</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setShowCulteModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C59A27] to-[#E5B22F] hover:from-[#b0871e] hover:to-[#cda028] text-slate-950 text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
-            >
-              <BookOpen className="w-4 h-4 text-slate-950" />
-              <span>+ Résumé du Culte</span>
-            </button>
+            {authorizedPastorPortions.includes('cultes') && (
+              <button
+                onClick={() => setShowCulteModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C59A27] to-[#E5B22F] hover:from-[#b0871e] hover:to-[#cda028] text-slate-950 text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
+              >
+                <BookOpen className="w-4 h-4 text-slate-950" />
+                <span>+ Résumé du Culte</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setShowCreateTemplateModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-black flex items-center gap-2 shadow-xs hover:scale-102 active:scale-95 transition-all"
-            >
-              <Layers className="w-4 h-4 text-[#E5B22F]" />
-              <span>Créer Fenêtre de Rapport</span>
-            </button>
+            {authorizedPastorPortions.includes('templates') && (
+              <button
+                onClick={() => setShowCreateTemplateModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-black flex items-center gap-2 shadow-xs hover:scale-102 active:scale-95 transition-all"
+              >
+                <Layers className="w-4 h-4 text-[#E5B22F]" />
+                <span>Créer Fenêtre de Rapport</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setShowSpecialModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-2 shadow-xs hover:scale-102 active:scale-95 transition-all"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-200" />
-              <span>Générer le Spécial & Partager</span>
-            </button>
+            {authorizedPastorPortions.includes('speciaux') && (
+              <button
+                onClick={() => setShowSpecialModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-2 shadow-xs hover:scale-102 active:scale-95 transition-all"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-200" />
+                <span>Générer le Spécial & Partager</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setActivePastorTab('responsables')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-[#E5B22F] hover:from-amber-500 hover:to-[#cda028] text-slate-950 text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
-            >
-              <Shield className="w-4 h-4 text-slate-950" />
-              <span>Gouvernance & Codes Responsables</span>
-            </button>
+            {!activeDelegation && (
+              <button
+                onClick={() => setActivePastorTab('cloisonnement')}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#0A3D36] hover:from-emerald-700 hover:to-[#062722] text-white text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all border border-emerald-400/40"
+              >
+                <KeyRound className="w-4 h-4 text-[#E5B22F]" />
+                <span>🔐 Liens Cloisonnés & Délégations</span>
+              </button>
+            )}
+
+            {!activeDelegation && (
+              <button
+                onClick={() => setActivePastorTab('responsables')}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-[#E5B22F] hover:from-amber-500 hover:to-[#cda028] text-slate-950 text-xs font-black flex items-center gap-2 shadow-md hover:scale-102 active:scale-95 transition-all"
+              >
+                <Shield className="w-4 h-4 text-slate-950" />
+                <span>Gouvernance & Codes Responsables</span>
+              </button>
+            )}
 
             {onOpenInvite && (
               <button
@@ -304,111 +372,161 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
 
         {/* Barre de navigation interne */}
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setActivePastorTab('inbox')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'inbox'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <Inbox className="w-4 h-4" />
-            <span>Boîte de Réception des Rapports</span>
-            {newReportsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-[#A31D24] text-white text-[10px] font-black flex items-center justify-center animate-pulse">
-                {newReportsCount}
-              </span>
-            )}
-          </button>
+          {authorizedPastorPortions.includes('inbox') && (
+            <button
+              onClick={() => setActivePastorTab('inbox')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'inbox'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Inbox className="w-4 h-4" />
+              <span>Boîte de Réception des Rapports</span>
+              {newReportsCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-[#A31D24] text-white text-[10px] font-black flex items-center justify-center animate-pulse">
+                  {newReportsCount}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => setActivePastorTab('cultes')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'cultes'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Résumés des Cultes ({cultes.length})</span>
-          </button>
+          {authorizedPastorPortions.includes('cultes') && (
+            <button
+              onClick={() => setActivePastorTab('cultes')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'cultes'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Résumés des Cultes ({cultes.length})</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActivePastorTab('templates')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'templates'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Fenêtres de Rapports ({templates.length})</span>
-          </button>
+          {authorizedPastorPortions.includes('templates') && (
+            <button
+              onClick={() => setActivePastorTab('templates')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'templates'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Fenêtres de Rapports ({templates.length})</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActivePastorTab('speciaux')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'speciaux'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-[#E5B22F]" />
-            <span>Rapports Spéciaux Générés ({rapportsSpeciaux.length})</span>
-          </button>
+          {authorizedPastorPortions.includes('speciaux') && (
+            <button
+              onClick={() => setActivePastorTab('speciaux')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'speciaux'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-[#E5B22F]" />
+              <span>Rapports Spéciaux Générés ({rapportsSpeciaux.length})</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActivePastorTab('presences')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'presences'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <UserCheck className="w-4 h-4 text-[#E5B22F]" />
-            <span>Pointage & Présences Dimanche (7h30 & 10h30)</span>
-            {presences.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[#C59A27] text-slate-950 text-[10px] font-black">
-                {presences.length}
-              </span>
-            )}
-          </button>
+          {authorizedPastorPortions.includes('presences') && (
+            <button
+              onClick={() => setActivePastorTab('presences')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'presences'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 text-[#E5B22F]" />
+              <span>Pointage & Présences Dimanche (7h30 & 10h30)</span>
+              {presences.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#C59A27] text-slate-950 text-[10px] font-black">
+                  {presences.length}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => setActivePastorTab('membres')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'membres'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <Users className="w-4 h-4 text-[#E5B22F]" />
-            <span>Effectif Total & Suivi des Brebis</span>
-            {tribeMembers.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[#C59A27] text-slate-950 text-[10px] font-black">
-                {tribeMembers.length}
-              </span>
-            )}
-          </button>
+          {authorizedPastorPortions.includes('membres') && (
+            <button
+              onClick={() => setActivePastorTab('membres')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'membres'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Users className="w-4 h-4 text-[#E5B22F]" />
+              <span>Effectif Total & Suivi des Brebis</span>
+              {tribeMembers.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#C59A27] text-slate-950 text-[10px] font-black">
+                  {tribeMembers.length}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => setActivePastorTab('responsables')}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
-              activePastorTab === 'responsables'
-                ? 'bg-white text-[#0A3D36] shadow-sm'
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            <Shield className="w-4 h-4 text-[#E5B22F]" />
-            <span>Nomination & Codes des Responsables</span>
-          </button>
+          {!activeDelegation && (
+            <button
+              onClick={() => setActivePastorTab('responsables')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'responsables'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <Shield className="w-4 h-4 text-[#E5B22F]" />
+              <span>Nomination & Codes des Responsables</span>
+            </button>
+          )}
+
+          {!activeDelegation && (
+            <button
+              onClick={() => setActivePastorTab('cloisonnement')}
+              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+                activePastorTab === 'cloisonnement'
+                  ? 'bg-white text-[#0A3D36] shadow-sm'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              <KeyRound className="w-4 h-4 text-[#E5B22F]" />
+              <span>🔐 Liens Cloisonnés & Délégations</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* 2. CONTENU PRINCIPAL PAR ONGLET */}
 
+      {!authorizedPastorPortions.includes(activePastorTab) && (
+        <div className="p-8 rounded-3xl bg-amber-50/80 border-2 border-amber-300 text-center space-y-3 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+            <Lock className="w-6 h-6 text-[#C59A27]" />
+          </div>
+          <h3 className="text-base font-black text-slate-900">
+            Portion Pastorale Réservée
+          </h3>
+          <p className="text-xs text-slate-600 max-w-md mx-auto">
+            Cette section ({activePastorTab}) n’est pas incluse dans la délégation accordée par le Pasteur pour votre rôle (<strong>{activeDelegation?.titreRole || 'Rôle restreint'}</strong>).
+          </p>
+          {authorizedPastorPortions[0] && (
+            <button
+              onClick={() => setActivePastorTab(authorizedPastorPortions[0] as any)}
+              className="px-4 py-2 rounded-xl bg-[#0A3D36] hover:bg-[#062722] text-white text-xs font-black shadow-sm transition-all cursor-pointer"
+            >
+              Aller à ma portion autorisée ({authorizedPastorPortions[0]})
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ONGLET A : BOÎTE DE RÉCEPTION DES RAPPORTS */}
-      {activePastorTab === 'inbox' && (
+      {authorizedPastorPortions.includes('inbox') && activePastorTab === 'inbox' && (
         <div className="space-y-5 animate-in fade-in">
           {/* Header de la Boîte */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
@@ -869,7 +987,7 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 truncate font-mono bg-white/70 px-1.5 py-0.5 rounded border border-amber-100">
-                      ?tab=pastor&rapportForm={tpl.id}
+                      ?rapportForm={tpl.id}
                     </p>
                   </div>
                 </div>
@@ -1079,9 +1197,16 @@ export const PastorSpaceView: React.FC<PastorSpaceViewProps> = ({
       )}
 
       {/* ONGLET G : GOUVERNANCE, NOMINATION & CODES DES RESPONSABLES */}
-      {activePastorTab === 'responsables' && (
+      {activePastorTab === 'responsables' && !activeDelegation && (
         <PastorLeadershipManager
           onBackToOverview={() => setActivePastorTab('inbox')}
+        />
+      )}
+
+      {/* ONGLET H : CLOISONNEMENT DES ACCÈS & LIENS DÉLÉGUÉS */}
+      {activePastorTab === 'cloisonnement' && !activeDelegation && (
+        <PastorCloisonnementManager
+          onTestDelegation={onTestDelegation}
         />
       )}
 

@@ -167,7 +167,7 @@ export const CreateSendReportModal: React.FC<CreateSendReportModalProps> = ({
   // Generate shareable link for the pastor
   const getShareablePastorLink = () => {
     if (!submittedReport) return '';
-    return `${window.location.origin}${window.location.pathname}?tab=pastor&viewRapportId=${submittedReport.id}`;
+    return `${window.location.origin}${window.location.pathname}?viewRapportId=${submittedReport.id}`;
   };
 
   const handleCopyLink = () => {

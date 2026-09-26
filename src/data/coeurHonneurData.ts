@@ -95,7 +95,7 @@ export const INITIAL_COEUR_CAMPAGNES: CoeurCampagneAide[] = [
     responsableContact: '+229 97 45 67 89',
     imageBannerUrl:
       'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=900&auto=format&fit=crop&q=80',
-    lienPartage: 'https://portedescieux.org/#coeur_honneur?campagne=camp-1',
+    lienPartage: 'https://portedescieux.org/?tab=coeur_honneur&campagne=camp-1',
     createdAt: '2026-09-01T08:00:00Z',
   },
   {
@@ -118,7 +118,7 @@ export const INITIAL_COEUR_CAMPAGNES: CoeurCampagneAide[] = [
     responsableContact: '+229 96 12 34 56',
     imageBannerUrl:
       'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=900&auto=format&fit=crop&q=80',
-    lienPartage: 'https://portedescieux.org/#coeur_honneur?campagne=camp-2',
+    lienPartage: 'https://portedescieux.org/?tab=coeur_honneur&campagne=camp-2',
     createdAt: '2026-08-15T10:00:00Z',
   },
   {
@@ -141,7 +141,7 @@ export const INITIAL_COEUR_CAMPAGNES: CoeurCampagneAide[] = [
     responsableContact: '+229 97 45 67 89',
     imageBannerUrl:
       'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=900&auto=format&fit=crop&q=80',
-    lienPartage: 'https://portedescieux.org/#coeur_honneur?campagne=camp-3',
+    lienPartage: 'https://portedescieux.org/?tab=coeur_honneur&campagne=camp-3',
     createdAt: '2026-09-05T09:00:00Z',
   },
   {
@@ -164,7 +164,7 @@ export const INITIAL_COEUR_CAMPAGNES: CoeurCampagneAide[] = [
     responsableContact: '+229 95 33 22 11',
     imageBannerUrl:
       'https://images.unsplash.com/photo-1556742049-0a67e557224c?w=900&auto=format&fit=crop&q=80',
-    lienPartage: 'https://portedescieux.org/#coeur_honneur?campagne=camp-4',
+    lienPartage: 'https://portedescieux.org/?tab=coeur_honneur&campagne=camp-4',
     createdAt: '2026-07-01T11:00:00Z',
   },
 ];

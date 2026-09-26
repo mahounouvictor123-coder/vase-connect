@@ -665,4 +665,38 @@ export interface CoeurCampagneAide {
   createdAt: string;
 }
 
+export type DelegationPortionType =
+  | 'MEMBRE'
+  | 'RESPONSABLE_PRESENCES'
+  | 'RESPONSABLE_TRIBU'
+  | 'BERGER_FAMILLE'
+  | 'RESPONSABLE_DEPARTEMENT'
+  | 'RESPONSABLE_COEUR_HONNEUR'
+  | 'SUR_MESURE';
+
+export interface PastorDelegation {
+  id: string;
+  nomBeneficiaire: string;
+  telephoneBeneficiaire?: string;
+  titreRole: string;
+  typePortion: DelegationPortionType;
+  ongletsAutorises: string[];
+  portionsPastoralesAutorisees?: (
+    | 'inbox'
+    | 'cultes'
+    | 'templates'
+    | 'speciaux'
+    | 'presences'
+    | 'membres'
+    | 'responsables'
+    | 'cloisonnement'
+  )[];
+  entiteAssociee?: string;
+  actif: boolean;
+  dateCreation: string;
+  codeAccesCourt: string;
+  notesPastorales?: string;
+}
+
+
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
-import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen, Share2, Heart } from 'lucide-react';
-import { UserProfile, Role, AppNotification } from '../types';
+import { Bell, Sparkles, User, Shield, Check, LogIn, ChevronDown, ArrowLeft, Home, Crown, Users, BookOpen, Share2, Heart, Smartphone } from 'lucide-react';
+import { UserProfile, Role, AppNotification, PastorDelegation } from '../types';
 
 interface HeaderProps {
   activeTab: string;
@@ -12,7 +12,9 @@ interface HeaderProps {
   onSelectTab: (tab: string) => void;
   onSwitchUser?: (memberId: string) => void;
   onOpenInvite?: () => void;
+  onOpenAddToHomeScreen?: () => void;
   allMembers?: UserProfile[];
+  activeDelegation?: PastorDelegation | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,12 +26,38 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   onSwitchUser = (_memberId: string) => {},
   onOpenInvite,
+  onOpenAddToHomeScreen,
   allMembers = [],
+  activeDelegation,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const defaultTabs = [
+    { id: 'accueil', label: 'Accueil' },
+    {
+      id: 'pastor',
+      label: currentUser?.role === 'PASTEUR' ? 'Espace Pasteur 📖' : 'Espace Pasteur 🔒',
+    },
+    { id: 'coeur_honneur', label: 'Cœur d’Honneur 💖' },
+    { id: 'presence_culte', label: 'Pointage Culte 🙏' },
+    { id: 'familles_honneur', label: "Familles d'Honneur 📍" },
+    { id: 'tribus', label: '12 Tribus' },
+    { id: 'departements', label: 'Départements' },
+    { id: 'portes', label: '12 Portes d\'Influence' },
+    { id: 'membres', label: 'Annuaire' },
+    { id: 'market', label: 'Market' },
+    { id: 'opportunites', label: 'Emplois' },
+    { id: 'ads', label: 'Boutiques' },
+    { id: 'evenements', label: 'Événements' },
+  ];
+
+  // If delegation is active, filter desktop nav to only authorized tabs
+  const visibleTabs = activeDelegation
+    ? defaultTabs.filter((t) => activeDelegation.ongletsAutorises.includes(t.id))
+    : defaultTabs;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -47,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
           {activeTab !== 'accueil' && (
             <button
               onClick={() => onSelectTab('accueil')}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0A3D36] to-[#135E54] hover:from-[#082e29] hover:to-[#0f4b43] text-white font-black text-xs shadow-xs transition-all hover:scale-102 active:scale-95 group border border-[#C59A27]/40"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0A3D36] to-[#135E54] hover:from-[#082e29] hover:to-[#0f4b43] text-white font-black text-xs shadow-xs transition-all hover:scale-102 active:scale-95 group border border-[#C59A27]/40 cursor-pointer"
               title="Retourner à la page d'accueil"
               aria-label="Retour à l'accueil"
             >
@@ -60,28 +88,11 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Navigation Links for Desktop */}
         <nav className="hidden lg:flex items-center gap-1 mx-2">
-          {[
-            { id: 'accueil', label: 'Accueil' },
-            {
-              id: 'pastor',
-              label: currentUser?.role === 'PASTEUR' ? 'Espace Pasteur 📖' : 'Espace Pasteur 🔒',
-            },
-            { id: 'coeur_honneur', label: 'Cœur d’Honneur 💖' },
-            { id: 'presence_culte', label: 'Pointage Culte 🙏' },
-            { id: 'familles_honneur', label: "Familles d'Honneur 📍" },
-            { id: 'tribus', label: '12 Tribus' },
-            { id: 'departements', label: 'Départements' },
-            { id: 'portes', label: '12 Portes d\'Influence' },
-            { id: 'membres', label: 'Annuaire' },
-            { id: 'market', label: 'Market' },
-            { id: 'opportunites', label: 'Emplois' },
-            { id: 'ads', label: 'Boutiques' },
-            { id: 'evenements', label: 'Événements' },
-          ].map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => onSelectTab(tab.id)}
-              className={`px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+              className={`px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? tab.id === 'coeur_honneur'
                     ? 'bg-[#541424] text-white shadow-xs'
@@ -102,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="hidden md:flex items-center flex-1 max-w-xs mx-2">
           <button
             onClick={onOpenAssistant}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 text-slate-500 text-xs transition-all group shadow-xs"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 text-slate-500 text-xs transition-all group shadow-xs cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#C59A27] group-hover:scale-110 transition-transform" />
@@ -113,11 +124,24 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions & Profile */}
         <div className="flex items-center gap-2">
+          {/* Bouton Ajouter l'application à l'écran */}
+          {onOpenAddToHomeScreen && (
+            <button
+              onClick={onOpenAddToHomeScreen}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0A3D36] to-[#135E54] hover:from-[#062722] hover:to-[#0A3D36] text-amber-200 border border-[#C59A27]/60 text-xs font-bold transition-all shadow-xs hover:scale-102 active:scale-95 cursor-pointer"
+              title="Installer l'application Vases Connect sur votre écran d'accueil"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-[#E5B22F]" />
+              <span className="hidden sm:inline font-black">📲 Installer l'App</span>
+              <span className="sm:hidden font-black">App</span>
+            </button>
+          )}
+
           {/* Bouton Inviter un Membre */}
           {onOpenInvite && (
             <button
               onClick={onOpenInvite}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#0A3D36] border border-[#C59A27]/40 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#0A3D36] border border-[#C59A27]/40 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95 cursor-pointer"
               title="Inviter un frère ou une sœur sur Vases Connect"
             >
               <Share2 className="w-3.5 h-3.5 text-[#C59A27]" />

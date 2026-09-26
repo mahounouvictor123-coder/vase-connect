@@ -172,7 +172,7 @@ export const CreateReportTemplateModal: React.FC<CreateReportTemplateModalProps>
   };
 
   const generatedUrl = createdTemplate
-    ? `${window.location.origin}${window.location.pathname}?tab=pastor&rapportForm=${createdTemplate.id}`
+    ? `${window.location.origin}${window.location.pathname}?rapportForm=${createdTemplate.id}`
     : '';
 
   const handleCopyLink = () => {

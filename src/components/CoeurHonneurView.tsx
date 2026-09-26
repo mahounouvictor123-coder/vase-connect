@@ -64,6 +64,7 @@ interface CoeurHonneurViewProps {
   onAddCampagne?: (campagne: CoeurCampagneAide) => void;
   onContributeCampagne?: (campagneId: string, montant: number) => void;
   initialCampagneId?: string;
+  initialOpenDonCampagneId?: string;
   tribes?: TribeInfo[];
   famillesHonneur?: FamilleHonneur[];
 }
@@ -78,6 +79,7 @@ export const CoeurHonneurView: React.FC<CoeurHonneurViewProps> = ({
   onAddCampagne,
   onContributeCampagne,
   initialCampagneId,
+  initialOpenDonCampagneId,
   tribes = [],
   famillesHonneur = [],
 }) => {
@@ -172,6 +174,16 @@ export const CoeurHonneurView: React.FC<CoeurHonneurViewProps> = ({
       }
     }
   }, [initialCampagneId, campagnesList]);
+
+  // If donation modal requested for a campaign
+  useEffect(() => {
+    if (initialOpenDonCampagneId && campagnesList.length > 0) {
+      const found = campagnesList.find((c) => c.id === initialOpenDonCampagneId);
+      if (found) {
+        setDonModalCampagne(found);
+      }
+    }
+  }, [initialOpenDonCampagneId, campagnesList]);
 
   // Sync props
   useEffect(() => {
@@ -323,7 +335,7 @@ export const CoeurHonneurView: React.FC<CoeurHonneurViewProps> = ({
 
   // Copy campaign share link
   const handleCopyCampagneLink = (campagne: CoeurCampagneAide) => {
-    const fullLink = `${window.location.origin}${window.location.pathname}#coeur_honneur?campagne=${campagne.id}`;
+    const fullLink = `${window.location.origin}${window.location.pathname}?tab=coeur_honneur&campagne=${campagne.id}`;
     navigator.clipboard.writeText(fullLink);
     setCopiedCampagneId(campagne.id);
     setTimeout(() => {
@@ -333,7 +345,7 @@ export const CoeurHonneurView: React.FC<CoeurHonneurViewProps> = ({
 
   // Share campaign on WhatsApp
   const handleShareCampagneWhatsApp = (campagne: CoeurCampagneAide) => {
-    const fullLink = `${window.location.origin}${window.location.pathname}#coeur_honneur?campagne=${campagne.id}`;
+    const fullLink = `${window.location.origin}${window.location.pathname}?tab=coeur_honneur&campagne=${campagne.id}`;
     const text = `🕊️ *ÉGLISE PORTE DES CIEUX — LE CŒUR D’HONNEUR*\n\nFrère / Sœur bien-aimé(e),\nSi vous traversez une difficulté ou êtes dans le besoin pour :\n*${campagne.titre}*\n\nL'Église se mobilise pour vous soutenir fraternellement. Renseignez directement votre demande d'aide sur le lien officiel sécurisé suivant :\n👉 ${fullLink}\n\nQue Dieu vous bénisse et vous fortifie !`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
@@ -428,7 +440,7 @@ export const CoeurHonneurView: React.FC<CoeurHonneurViewProps> = ({
       responsableContact: currentUser?.phone || RESPONSABLE_COEUR_HONNEUR_INFO.telephone,
       imageBannerUrl:
         'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=900&auto=format&fit=crop&q=80',
-      lienPartage: `${window.location.origin}${window.location.pathname}#coeur_honneur?campagne=camp-${Date.now()}`,
+      lienPartage: `${window.location.origin}${window.location.pathname}?tab=coeur_honneur&campagne=camp-${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
 
@@ -1387,7 +1399,7 @@ export const CoeurHonneurView: React.FC<CoeurHonneurViewProps> = ({
                   <p className="text-[11px] text-slate-500 line-clamp-2">{c.description}</p>
 
                   <div className="p-2 bg-white rounded-xl border border-slate-200 text-[10px] font-mono text-slate-600 truncate flex items-center justify-between">
-                    <span className="truncate">{window.location.origin}/#coeur_honneur?campagne={c.id}</span>
+                    <span className="truncate">{window.location.origin}/?tab=coeur_honneur&campagne={c.id}</span>
                   </div>
 
                   <div className="flex items-center gap-2 pt-1">

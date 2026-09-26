@@ -23,9 +23,17 @@ import { FamillesHonneurView } from './components/FamillesHonneurView';
 import { PastorSpaceView } from './components/pastor/PastorSpaceView';
 import { PastorAccessGuard } from './components/pastor/PastorAccessGuard';
 import { CoeurHonneurView } from './components/CoeurHonneurView';
+import { DirectCampagneSpotlightModal } from './components/campaign/DirectCampagneSpotlightModal';
+import { DirectReportModal } from './components/pastor/DirectReportModal';
+import { RapportDetailModal } from './components/pastor/RapportDetailModal';
 import { InviteWelcomeModal } from './components/InviteWelcomeModal';
 import { InviteMemberModal } from './components/InviteMemberModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PastorDelegation } from './types';
+import { getPastorDelegations } from './data/pastorDelegationsData';
+import { DelegatedAccessBanner } from './components/delegation/DelegatedAccessBanner';
+import { UnauthorizedPortionCard } from './components/delegation/UnauthorizedPortionCard';
+import { AddToHomeScreenModal } from './components/common/AddToHomeScreenModal';
 import {
   MOCK_CURRENT_USER,
   MOCK_MEMBERS,
@@ -136,6 +144,18 @@ export default function App() {
   });
 
   const [coeurCampagneParamId, setCoeurCampagneParamId] = useState<string | undefined>(undefined);
+  const [directCampagneSpotlight, setDirectCampagneSpotlight] = useState<CoeurCampagneAide | null>(null);
+  const [initialOpenDonCampagneId, setInitialOpenDonCampagneId] = useState<string | undefined>(undefined);
+  const [directSubmitTemplate, setDirectSubmitTemplate] = useState<RapportTemplate | null>(null);
+  const [directViewRapport, setDirectViewRapport] = useState<RapportSoumis | null>(null);
+  const [activeDelegation, setActiveDelegation] = useState<PastorDelegation | null>(() => {
+    try {
+      const saved = localStorage.getItem('vases_active_delegation');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+  const [showAddToHomeScreenModal, setShowAddToHomeScreenModal] = useState<boolean>(false);
 
   const handleAddCoeurDemande = (newDemande: CoeurDemandeAide) => {
     setCoeurDemandes(prev => {
@@ -340,12 +360,41 @@ export default function App() {
       // Ignore
     }
 
+    // Helper to safely extract clean tab name without query string from hash
+    const extractCleanTab = (hashStr: string): string | null => {
+      const clean = hashStr.replace(/^#/, '');
+      const qIndex = clean.indexOf('?');
+      const candidate = qIndex !== -1 ? clean.substring(0, qIndex) : clean;
+      if (candidate.includes('=')) return null;
+      return candidate || null;
+    };
+
+    // Helper to extract all query params from both window.location.search AND window.location.hash
+    const getAllUrlParams = (): URLSearchParams => {
+      const params = new URLSearchParams(window.location.search);
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const rawHash = window.location.hash.replace(/^#/, '');
+        const qIndex = rawHash.indexOf('?');
+        if (qIndex !== -1) {
+          const hashQuery = rawHash.substring(qIndex + 1);
+          new URLSearchParams(hashQuery).forEach((val, key) => {
+            if (!params.has(key)) params.set(key, val);
+          });
+        } else if (rawHash.includes('=')) {
+          new URLSearchParams(rawHash).forEach((val, key) => {
+            if (!params.has(key)) params.set(key, val);
+          });
+        }
+      }
+      return params;
+    };
+
     // Synchronize browser history and physical back button
     const handlePopState = (e: PopStateEvent) => {
       if (e.state && e.state.tab) {
         setActiveTab(e.state.tab);
       } else if (window.location.hash) {
-        const hashTab = window.location.hash.replace('#', '');
+        const hashTab = extractCleanTab(window.location.hash);
         if (hashTab) setActiveTab(hashTab);
         else setActiveTab('accueil');
       } else {
@@ -355,13 +404,13 @@ export default function App() {
     };
 
     if (window.location.hash) {
-      const initialTab = window.location.hash.replace('#', '');
+      const initialTab = extractCleanTab(window.location.hash);
       if (initialTab) setActiveTab(initialTab);
     }
 
     // Check query parameters for invite, direct report form link or tab
     try {
-      const searchParams = new URLSearchParams(window.location.search);
+      const searchParams = getAllUrlParams();
       const isInviteParam =
         searchParams.get('invite') !== null ||
         searchParams.get('invited') !== null ||
@@ -379,16 +428,88 @@ export default function App() {
         setInviteEmailHint(emailParam);
       }
 
-      const requestedFormId = searchParams.get('rapportForm');
-      const requestedTab = searchParams.get('tab');
-      const requestedDate = searchParams.get('date');
-      const requestedCulte = searchParams.get('culte') as CulteServiceType | null;
-      const requestedCampagne = searchParams.get('campagne') || searchParams.get('coeur_campagne');
+      // Campagnes d'aide (ex: ?campagne=camp-1 or #coeur_honneur?campagne=camp-1)
+      const requestedCampagne =
+        searchParams.get('campagne') ||
+        searchParams.get('coeur_campagne') ||
+        searchParams.get('campagneId') ||
+        searchParams.get('aide');
 
       if (requestedCampagne) {
         setCoeurCampagneParamId(requestedCampagne);
         setActiveTab('coeur_honneur');
+
+        // Immédiatement ouvrir la modale officielle de la campagne
+        const foundCamp =
+          coeurCampagnes.find((c) => c.id === requestedCampagne) ||
+          INITIAL_COEUR_CAMPAGNES.find((c) => c.id === requestedCampagne);
+        if (foundCamp) {
+          setDirectCampagneSpotlight(foundCamp);
+        }
       }
+
+      // Rapports - FORMULAIRE À REMPLIR PAR LE MEMBRE/RESPONSABLE
+      const requestedFormId =
+        searchParams.get('rapportForm') ||
+        searchParams.get('rapport_form') ||
+        searchParams.get('template') ||
+        searchParams.get('templateId') ||
+        searchParams.get('formRapport');
+
+      if (requestedFormId) {
+        setTargetRapportFormId(requestedFormId);
+        const targetTpl =
+          rapportTemplates.find((t) => t.id === requestedFormId) ||
+          INITIAL_RAPPORT_TEMPLATES.find((t) => t.id === requestedFormId);
+        if (targetTpl) {
+          setDirectSubmitTemplate(targetTpl);
+        }
+        // Ne PAS forcer activeTab = 'pastor' pour éviter le blocage par PastorAccessGuard
+      }
+
+      // Rapports - CONSULTATION D'UN RAPPORT TRANSMIS
+      const requestedViewRapportId =
+        searchParams.get('viewRapportId') ||
+        searchParams.get('rapportId') ||
+        searchParams.get('viewRapport');
+
+      if (requestedViewRapportId) {
+        const targetRap =
+          rapports.find((r) => r.id === requestedViewRapportId) ||
+          INITIAL_RAPPORTS_SOUMIS.find((r) => r.id === requestedViewRapportId);
+        if (targetRap) {
+          setDirectViewRapport(targetRap);
+        }
+      }
+
+      // Délégation pastorale d'accès cloisonné (ex: ?delegation=del-resp-presences ou ?acces=VC-PRES-7721)
+      const requestedDelegationParam =
+        searchParams.get('delegation') ||
+        searchParams.get('portion') ||
+        searchParams.get('acces') ||
+        searchParams.get('delegue') ||
+        searchParams.get('acces_delegue');
+
+      if (requestedDelegationParam) {
+        const allDels = getPastorDelegations();
+        const foundDel =
+          allDels.find((d) => d.id === requestedDelegationParam) ||
+          allDels.find((d) => d.codeAccesCourt.toLowerCase() === requestedDelegationParam.toLowerCase()) ||
+          allDels.find((d) => d.typePortion.toLowerCase() === requestedDelegationParam.toLowerCase());
+
+        if (foundDel && foundDel.actif) {
+          setActiveDelegation(foundDel);
+          try {
+            localStorage.setItem('vases_active_delegation', JSON.stringify(foundDel));
+          } catch {}
+          const firstAuthorized = foundDel.ongletsAutorises[0] || 'accueil';
+          setActiveTab(firstAuthorized);
+        }
+      }
+
+      const requestedTab = searchParams.get('tab');
+      const requestedDate = searchParams.get('date');
+      const requestedCulte = searchParams.get('culte') as CulteServiceType | null;
 
       if (requestedDate) {
         setPresenceParamDate(requestedDate);
@@ -397,10 +518,7 @@ export default function App() {
         setPresenceParamCulte(requestedCulte);
       }
 
-      if (requestedFormId) {
-        setTargetRapportFormId(requestedFormId);
-        setActiveTab('pastor');
-      } else if (requestedTab) {
+      if (requestedTab && !requestedCampagne && !requestedFormId) {
         setActiveTab(requestedTab);
       }
 
@@ -475,6 +593,26 @@ export default function App() {
 
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Synchroniser l'ouverture de la modale campagne si demandée par URL et dès chargement des campagnes
+  useEffect(() => {
+    if (coeurCampagneParamId && !directCampagneSpotlight && coeurCampagnes.length > 0) {
+      const found = coeurCampagnes.find((c) => c.id === coeurCampagneParamId);
+      if (found) {
+        setDirectCampagneSpotlight(found);
+      }
+    }
+  }, [coeurCampagneParamId, directCampagneSpotlight, coeurCampagnes]);
+
+  // Synchroniser le formulaire direct de rapport dès chargement des templates
+  useEffect(() => {
+    if (targetRapportFormId && !directSubmitTemplate && rapportTemplates.length > 0) {
+      const found = rapportTemplates.find((t) => t.id === targetRapportFormId);
+      if (found) {
+        setDirectSubmitTemplate(found);
+      }
+    }
+  }, [targetRapportFormId, directSubmitTemplate, rapportTemplates]);
 
   const handleOpenAssistant = (prompt?: string) => {
     if (prompt) setAssistantPrompt(prompt);
@@ -862,11 +1000,29 @@ export default function App() {
         onOpenAssistant={() => handleOpenAssistant()}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onOpenInvite={() => setIsInviteModalOpen(true)}
+        onOpenAddToHomeScreen={() => setShowAddToHomeScreenModal(true)}
         notifications={notifications}
         onClearNotifications={handleClearNotifications}
         onSwitchUser={handleSwitchUser}
         allMembers={members}
+        activeDelegation={activeDelegation}
       />
+
+      {/* Bandeau d'accès délégué si l'utilisateur est sous délégation pastorale */}
+      {activeDelegation && (
+        <DelegatedAccessBanner
+          delegation={activeDelegation}
+          activeTab={activeTab}
+          onNavigateAuthorizedTab={handleNavigateTab}
+          onExitDelegation={() => {
+            setActiveDelegation(null);
+            try {
+              localStorage.removeItem('vases_active_delegation');
+            } catch {}
+            handleNavigateTab('accueil');
+          }}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 w-full">
@@ -876,69 +1032,84 @@ export default function App() {
           onSelectTab={handleNavigateTab}
         />
 
-        {activeTab === 'accueil' && (
-          <HomeView
-            onSelectTab={handleNavigateTab}
-            onOpenAssistantWithPrompt={handleOpenAssistant}
-            onSelectMember={() => handleNavigateTab('membres')}
-            onSelectProduct={() => handleNavigateTab('market')}
-            onSelectGate={(gateId) => {
-              setSelectedGateIdForView(gateId as InfluenceGateId);
-              handleNavigateTab('portes');
-            }}
-            onSelectTribe={(tribeId) => {
-              setSelectedTribeIdForView(tribeId as TribeId);
-              handleNavigateTab('tribus');
-            }}
-            members={members}
-            products={products}
-            opportunities={opportunities}
-            events={MOCK_EVENTS}
-            posts={posts}
-            ads={ads}
-            currentUser={currentUser}
-            onOpenInvite={() => setIsInviteModalOpen(true)}
-            onOpenCreateAd={() => setIsCreateAdModalOpen(true)}
-            onOpenProfessionalProfile={() => setIsProfessionalProfileModalOpen(true)}
+        {/* Protection de cloisonnement : si l'onglet demandé n'est pas autorisé par la délégation */}
+        {activeDelegation && !activeDelegation.ongletsAutorises.includes(activeTab) ? (
+          <UnauthorizedPortionCard
+            delegation={activeDelegation}
+            attemptedTab={activeTab}
+            onReturnToAuthorized={handleNavigateTab}
           />
-        )}
+        ) : (
+          <>
+            {activeTab === 'accueil' && (
+              <HomeView
+                onSelectTab={handleNavigateTab}
+                onOpenAssistantWithPrompt={handleOpenAssistant}
+                onSelectMember={() => handleNavigateTab('membres')}
+                onSelectProduct={() => handleNavigateTab('market')}
+                onSelectGate={(gateId) => {
+                  setSelectedGateIdForView(gateId as InfluenceGateId);
+                  handleNavigateTab('portes');
+                }}
+                onSelectTribe={(tribeId) => {
+                  setSelectedTribeIdForView(tribeId as TribeId);
+                  handleNavigateTab('tribus');
+                }}
+                members={members}
+                products={products}
+                opportunities={opportunities}
+                events={MOCK_EVENTS}
+                posts={posts}
+                ads={ads}
+                currentUser={currentUser}
+                onOpenInvite={() => setIsInviteModalOpen(true)}
+                onOpenCreateAd={() => setIsCreateAdModalOpen(true)}
+                onOpenProfessionalProfile={() => setIsProfessionalProfileModalOpen(true)}
+              />
+            )}
 
-        {activeTab === 'pastor' && (
-          currentUser?.role === 'PASTEUR' ? (
-            <PastorSpaceView
-              currentUser={currentUser}
-              cultes={cultes}
-              templates={rapportTemplates}
-              rapports={rapports}
-              rapportsSpeciaux={rapportsSpeciaux}
-              presences={cultesPresences}
-              tribes={tribes}
-              tribeMembers={tribeMembers}
-              initialRapportFormId={targetRapportFormId}
-              onOpenInvite={() => setIsInviteModalOpen(true)}
-              onAddCulte={handleAddCulte}
-              onAddTemplate={handleAddTemplate}
-              onAddRapport={handleAddRapport}
-              onUpdateRapport={handleUpdateRapport}
-              onAddRapportSpecial={handleAddRapportSpecial}
-              onAddPresence={handleAddCultePresence}
-              onDeletePresence={handleDeleteCultePresence}
-              onOpenPublicLink={(date, culte) => {
-                setPresenceParamDate(date);
-                setPresenceParamCulte(culte);
-                handleNavigateTab('presence_culte');
-              }}
-            />
-          ) : (
-            <PastorAccessGuard
-              currentUser={currentUser}
-              onBackToHome={() => handleNavigateTab('accueil')}
-              onPastorUnlocked={(pastorUser) => {
-                handleUserLoginSuccess(pastorUser);
-              }}
-            />
-          )
-        )}
+            {activeTab === 'pastor' && (
+              (currentUser?.role === 'PASTEUR' || (activeDelegation && activeDelegation.ongletsAutorises.includes('pastor'))) ? (
+                <PastorSpaceView
+                  currentUser={currentUser}
+                  activeDelegation={activeDelegation}
+                  cultes={cultes}
+                  templates={rapportTemplates}
+                  rapports={rapports}
+                  rapportsSpeciaux={rapportsSpeciaux}
+                  presences={cultesPresences}
+                  tribes={tribes}
+                  tribeMembers={tribeMembers}
+                  initialRapportFormId={targetRapportFormId}
+                  initialPastorTab={activeDelegation?.portionsPastoralesAutorisees?.[0] || 'inbox'}
+                  onOpenInvite={() => setIsInviteModalOpen(true)}
+                  onTestDelegation={(del) => {
+                    setActiveDelegation(del);
+                    handleNavigateTab(del.ongletsAutorises[0] || 'accueil');
+                  }}
+                  onAddCulte={handleAddCulte}
+                  onAddTemplate={handleAddTemplate}
+                  onAddRapport={handleAddRapport}
+                  onUpdateRapport={handleUpdateRapport}
+                  onAddRapportSpecial={handleAddRapportSpecial}
+                  onAddPresence={handleAddCultePresence}
+                  onDeletePresence={handleDeleteCultePresence}
+                  onOpenPublicLink={(date, culte) => {
+                    setPresenceParamDate(date);
+                    setPresenceParamCulte(culte);
+                    handleNavigateTab('presence_culte');
+                  }}
+                />
+              ) : (
+                <PastorAccessGuard
+                  currentUser={currentUser}
+                  onBackToHome={() => handleNavigateTab('accueil')}
+                  onPastorUnlocked={(pastorUser) => {
+                    handleUserLoginSuccess(pastorUser);
+                  }}
+                />
+              )
+            )}
 
         {activeTab === 'coeur_honneur' && (
           <CoeurHonneurView
@@ -951,6 +1122,7 @@ export default function App() {
             onAddCampagne={handleAddCoeurCampagne}
             onContributeCampagne={handleContributeCoeurCampagne}
             initialCampagneId={coeurCampagneParamId}
+            initialOpenDonCampagneId={initialOpenDonCampagneId}
             tribes={tribes}
             famillesHonneur={famillesHonneur}
           />
@@ -1121,6 +1293,8 @@ export default function App() {
             onBackToHome={() => handleNavigateTab('accueil')}
           />
         )}
+          </>
+        )}
       </main>
 
       {/* Floating Return to Home Button for deep scroll on mobile/desktop */}
@@ -1134,10 +1308,19 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={handleNavigateTab}
         onOpenAssistant={() => handleOpenAssistant()}
+        activeDelegation={activeDelegation}
       />
 
       {/* PWA Offline & Installation Banner */}
       <PWAInstallPrompt />
+
+      {/* Modal Universelle Ajouter à l'Écran d'Accueil (Application Mobile Vases Connect avec logo officiel) */}
+      <AddToHomeScreenModal
+        isOpen={showAddToHomeScreenModal}
+        onClose={() => setShowAddToHomeScreenModal(false)}
+        customTitle={activeDelegation ? `Vases Connect • ${activeDelegation.titreRole}` : 'Vases Connect'}
+        customPortion={activeDelegation?.titreRole}
+      />
 
       {/* Phone & Gmail & Pastoral Authentication Modal */}
       <AuthModal
@@ -1198,6 +1381,50 @@ export default function App() {
           onClose={() => setIsProfessionalProfileModalOpen(false)}
           currentUser={currentUser}
           onSaveProfile={handleUpdateProfile}
+        />
+      )}
+
+      {/* Modale d'accueil officielle & immédiate sur la Campagne sélectionnée via lien direct */}
+      {directCampagneSpotlight && (
+        <DirectCampagneSpotlightModal
+          campagne={directCampagneSpotlight}
+          onClose={() => setDirectCampagneSpotlight(null)}
+          onRequestHelp={(camp) => {
+            setDirectCampagneSpotlight(null);
+            setCoeurCampagneParamId(camp.id);
+            setActiveTab('coeur_honneur');
+            window.scrollTo({ top: 350, behavior: 'smooth' });
+          }}
+          onDonate={(camp) => {
+            setDirectCampagneSpotlight(null);
+            setInitialOpenDonCampagneId(camp.id);
+            setActiveTab('coeur_honneur');
+          }}
+        />
+      )}
+
+      {/* Formulaire officiel de Rapport pastoral direct pour les membres et responsables via lien */}
+      {directSubmitTemplate && (
+        <DirectReportModal
+          template={directSubmitTemplate}
+          currentUser={currentUser}
+          onClose={() => setDirectSubmitTemplate(null)}
+          onSubmitReport={(newRapport) => {
+            handleAddRapport(newRapport);
+          }}
+        />
+      )}
+
+      {/* Consultation directe d'un Rapport transmis pour consultation immédiate */}
+      {directViewRapport && (
+        <RapportDetailModal
+          rapport={directViewRapport}
+          canAnnotate={currentUser?.role === 'PASTEUR'}
+          onClose={() => setDirectViewRapport(null)}
+          onUpdateRapport={(updated) => {
+            handleUpdateRapport(updated);
+            setDirectViewRapport(updated);
+          }}
         />
       )}
     </div>
